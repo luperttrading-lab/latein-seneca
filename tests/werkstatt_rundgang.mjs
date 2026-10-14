@@ -51,7 +51,8 @@ await ws.addInitScript(({ SAETZE, einheiten }) => {
     await new Promise(r => setTimeout(r, 30));
     if (opts.images) {
       aufrufe.push({ art: 'erkennen', bilder: opts.images.length });
-      return { autor: 'Seneca', werk: 'De vita beata', stelle: 'Kapitel 1, Abschnitt 1', einheiten, unsicher: ['inpellit'] };
+      // Einheit 1 ohne Stellenangabe – so liefert Claude Lehrbuchtexte ohne Abschnittszahlen
+      return { autor: '', werk: 'De vita beata', stelle: 'Kapitel 1, Abschnitt 1', einheiten: einheiten.map((e, i) => (i === 0 ? { text: e.text } : e)), unsicher: ['inpellit'] };
     }
     const n = Number(input.match(/Analysiere NUR Einheit (\d+)/)[1]);
     const nachbesserung = input.includes('hatte formale Fehler');
@@ -78,7 +79,8 @@ await ws.click('#analysieren');
 await ws.waitForFunction(() => !document.getElementById('s4').classList.contains('zu'), null, { timeout: 20000 });
 const aufrufe = await ws.evaluate(() => window.__aufrufe);
 pruefe(aufrufe.some(a => a.n === 2 && a.nachbesserung && a.cache === false), 'Werkstatt: Nachbesserung für Einheit 2 fehlt');
-pruefe(aufrufe.filter(a => a.art === 'analyse').length === 4, 'Werkstatt: 3 Analysen + 1 Nachbesserung erwartet');
+pruefe(aufrufe.filter(a => a.art === 'analyse').length === 4, 'Werkstatt: 3 Analysen + 1 Nachbesserung erwartet (keine Nachbesserung wegen fehlender Stelle)');
+pruefe(JSON.parse(await ws.inputValue('#ausgabe')).saetze[0].ref === '1', 'Werkstatt: Einheit ohne Stelle sollte laufende Nummer bekommen');
 const json = await ws.inputValue('#ausgabe');
 pruefe(json.length > 1000, 'Werkstatt: Ausgabe leer');
 pruefe((await ws.locator('#ergebnis').innerText()).includes('Bereit für die App'), 'Werkstatt: Ergebnis nicht bereit');

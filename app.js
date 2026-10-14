@@ -405,7 +405,7 @@ function renderAbfrage() {
 }
 
 function render() {
-  $('autor').textContent = TEXT.autor || 'Seneca';
+  $('autor').textContent = TEXT.autor || '';
   $('schrift').textContent = TEXT.titel;
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('an', b.dataset.tab === stand.tab));
   if (stand.tab === 'methode') renderMethode();

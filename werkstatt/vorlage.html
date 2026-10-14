@@ -150,7 +150,7 @@ const SPEICHER = 'werkstatt.v1';
 const $ = id => document.getElementById(id);
 
 // ───────── Zustand (nur im Browser dieses Geräts, für Unterbrechungen)
-const leer = () => ({ autor: 'Seneca', werk: '', stelle: '', unsicher: [], einheiten: [], phase: 1 });
+const leer = () => ({ autor: '', werk: '', stelle: '', unsicher: [], einheiten: [], phase: 1 });
 let st = (() => { try { return Object.assign(leer(), JSON.parse(localStorage.getItem(SPEICHER)) || {}); } catch (_) { return leer(); } })();
 const sichere = () => { try { localStorage.setItem(SPEICHER, JSON.stringify(st)); } catch (_) {} };
 
@@ -232,9 +232,9 @@ async function erkennen() {
     const a = await sample.json(promptErkennen(teile, fotos.length, roh || ''), opts);
     const einheiten = Array.isArray(a?.einheiten) ? a.einheiten.filter(e => e && typeof e.text === 'string' && e.text.trim()) : [];
     if (!einheiten.length) { $('s1-status').textContent = a?.hinweis || 'Kein lateinischer Text erkannt. Bitte ein schärferes Foto wählen.'; return; }
-    st = { ...leer(), autor: str(a.autor) || 'Seneca', werk: str(a.werk), stelle: str(a.stelle),
+    st = { ...leer(), autor: str(a.autor), werk: str(a.werk), stelle: str(a.stelle),
       unsicher: Array.isArray(a.unsicher) ? a.unsicher.map(String).slice(0, 20) : [],
-      einheiten: einheiten.map(e => ({ ref: str(e.ref), text: e.text.trim(), status: 'offen', satz: null, fehler: [] })), phase: 2 };
+      einheiten: einheiten.map((e, k) => ({ ref: str(e.ref) || String(k + 1), text: e.text.trim(), status: 'offen', satz: null, fehler: [] })), phase: 2 };
     sichere(); $('s1-status').textContent = `${st.einheiten.length} Einheiten erkannt.`;
     zeige();
     $('s2').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -243,27 +243,29 @@ async function erkennen() {
   } finally { laufend.delete(ctl); knopf.disabled = false; }
 }
 const str = x => (typeof x === 'string' ? x.trim() : '');
+// Texte ohne Kapitel- und Abschnittszahlen (z. B. Lehrbuchtexte): laufende Nummer als Stelle
+const stelle = (e, i) => str(e.ref) || String(i + 1);
 
 // ───────── Analyse je Einheit
 const nurBuchstaben = t => t.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '');
 
 function promptAnalyse(i, vorige) {
   const e = st.einheiten[i];
-  const kontext = st.einheiten.map((x, k) => `${k + 1}. [${x.ref}] ${x.text}`).join('\n');
+  const kontext = st.einheiten.map((x, k) => `${k + 1}. [${stelle(x, k)}] ${x.text}`).join('\n');
   let p = `Du bist ein erfahrener Lateinlehrer und erstellst Lernmaterial für eine Übersetzungs-App. Sie bringt Lernenden eine feste Methode bei: Gliedern → Prädikat → Subjekt → Ergänzungen → Bezüge (KNG) → Konstruktionen → Übersetzen. Ziel: Wer die App benutzt, lernt das Vorgehen und kann es später ohne App anwenden.
 
-Werk: ${st.autor}, ${st.werk} (${st.stelle})
+Werk: ${[st.autor, st.werk].filter(Boolean).join(', ') || 'unbekannt'}${st.stelle ? ' (' + st.stelle + ')' : ''}
 Die ganze Seite, damit du den Zusammenhang kennst:
 ${kontext}
 
-Analysiere NUR Einheit ${i + 1} [${e.ref}]:
+Analysiere NUR Einheit ${i + 1} [${stelle(e, i)}]:
 ${e.text}
 
 Gib genau ein JSON-Objekt zurück, aufgebaut wie dieses fertige Beispiel einer anderen Einheit derselben Schrift:
 ${JSON.stringify(BEISPIEL)}
 
 Feldregeln:
-- "id": "s${i + 1}", "ref": "${e.ref}".
+- "id": "s${i + 1}", "ref": "${stelle(e, i)}".
 - "thema": ein Satz Orientierung, ohne die Übersetzung vorwegzunehmen.
 - "w": alle Tokens in Textreihenfolge. Jedes Wort genau in der Schreibung der Einheit als {"t","l","b","f","fn","r","c"}, jedes Satzzeichen als {"p": ","}. Mehrteilige Subjunktionen wie "quam diu" oder "etiam si" dürfen ein Token sein; angehängtes -que bleibt am Wort.
 - "l": Wörterbuchform ohne Längenzeichen – Verben mit allen Stammformen (Deponentien mit „(Deponens)“), Substantive mit Genitiv und Genus, Adjektive mit allen Endungen.
@@ -288,7 +290,7 @@ Prüfe jede Form im Zusammenhang der ganzen Seite. Antworte nur mit dem JSON-Obj
 function pruefeEinheit(i, s) {
   const e = st.einheiten[i];
   if (!s || typeof s !== 'object' || Array.isArray(s)) return ['Antwort ist kein JSON-Objekt'];
-  s.id = 's' + (i + 1); s.ref = e.ref;
+  s.id = 's' + (i + 1); s.ref = stelle(e, i);   // setzt die Seite selbst, nie Claudes Fehler
   const fehler = Pruefung.pruefeSatz(s, 'Einheit ' + (i + 1));
   if (Array.isArray(s.w)) {
     const woerter = nurBuchstaben(s.w.filter(x => x && typeof x.t === 'string').map(x => x.t).join(''));
@@ -315,8 +317,8 @@ async function analysiereEinheit(i, frisch) {
       satz = await sample.json(promptAnalyse(i, { fehler: fehler.slice(0, 15), satz }), opts(1));
       fehler = pruefeEinheit(i, satz);
     }
-    if (fehler.length) { e.status = 'fehler'; e.fehler = fehler.slice(0, 4); e.satz = null; }
-    else { e.status = 'fertig'; e.satz = satz; }
+    if (fehler.length) { e.status = 'fehler'; e.fehler = fehler.slice(0, 4); e.satz = null; e.roh = satz; }
+    else { e.status = 'fertig'; e.satz = satz; delete e.roh; }
   } catch (err) {
     e.status = err?.code === 'cancelled' ? 'offen' : 'fehler';
     e.fehler = err?.code === 'cancelled' ? [] : [meldung(err)];
@@ -351,7 +353,7 @@ function textObjekt() {
   const titel = st.werk || 'Neuer Text';
   const slug = titel.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'text';
   return {
-    id: `${slug}-${Date.now().toString(36)}`, autor: st.autor || 'Seneca', titel, untertitel: st.stelle,
+    id: `${slug}-${Date.now().toString(36)}`, autor: st.autor, titel, untertitel: st.stelle,
     auto: true, erstellt: new Date().toISOString().slice(0, 10),
     saetze: st.einheiten.map(e => e.satz),
   };
@@ -425,7 +427,7 @@ $('einheiten').addEventListener('input', e => {
   const i = Number(e.target.dataset.i), feld = e.target.dataset.feld;
   if (!feld || !st.einheiten[i]) return;
   st.einheiten[i][feld] = e.target.value;
-  st.einheiten[i].status = 'offen'; st.einheiten[i].satz = null;   // geänderter Text → neu analysieren
+  st.einheiten[i].status = 'offen'; st.einheiten[i].satz = null; delete st.einheiten[i].roh;   // geänderter Text → neu analysieren
   if (feld === 'text') hoehe(e.target);
   if (st.phase > 2) st.phase = 3;
   sichere();
@@ -476,8 +478,12 @@ zeige();
   grenzen = await sample.limits().catch(() => null);
   if (!grenzen?.images) { $('foto-label').hidden = true; $('s1').querySelector('details').open = true; }
   $('sichern').hidden = !downloads;
-  // Ein unterbrochener Lauf (Seite neu geladen) gilt als wartend
-  st.einheiten.forEach(e => { if (e.status === 'laeuft') e.status = 'offen'; });
-  zeige();
+  // Ein unterbrochener Lauf (Seite neu geladen) gilt als wartend; aufgehobene Antworten neu prüfen
+  st.einheiten.forEach((e, i) => {
+    if (e.status === 'laeuft') e.status = 'offen';
+    if (e.status === 'fehler' && e.roh && !pruefeEinheit(i, e.roh).length) { e.status = 'fertig'; e.satz = e.roh; e.fehler = []; delete e.roh; }
+  });
+  if (st.einheiten.length && st.einheiten.every(e => e.status === 'fertig')) st.phase = 4;
+  sichere(); zeige();
 })();
 </script>

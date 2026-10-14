@@ -16,6 +16,7 @@ const z = p => ({ p });
 
 const TEXTE = [{
   id: 'dvb-1',
+  autor: 'Seneca',
   titel: 'De vita beata',
   untertitel: 'Kapitel 1, Abschnitt 1–2',
   saetze: [
