@@ -38,8 +38,21 @@ await seite.goto(url);
 await seite.waitForSelector('#latein .wort');
 const wort = (form, nr = 1) => seite.locator('#latein .wort', { hasText: new RegExp(`^${form}$`) }).nth(nr - 1);
 
-// Schritt 1: Gliedern – erst ein falsches Wort, dann richtig
+// Erste Orientierung, dann weg
+pruefe(await seite.locator('.intro').count() === 1, 'Intro-Karte beim ersten Start fehlt');
 await foto('01-start');
+await seite.click('[data-act=intro-weg]');
+pruefe(await seite.locator('.intro').count() === 0, 'Intro-Karte bleibt nach „Los geht’s“');
+
+// Langes Drücken während einer Tipp-Aufgabe schlägt nach, wählt aber nicht aus
+await wort('Vivere').hover(); await seite.mouse.down(); await seite.waitForTimeout(650); await seite.mouse.up();
+await seite.waitForSelector('.blatt.an');
+pruefe((await seite.locator('.blatt').innerText()).includes('leben'), 'Langes Drücken öffnet keine Wortkarte');
+await seite.click('.blatt [data-act=schliessen]');
+await seite.waitForTimeout(350);
+pruefe(await seite.locator('#latein .wort.sel').count() === 0, 'Langes Drücken darf nicht auswählen');
+
+// Schritt 1: Gliedern – erst ein falsches Wort, dann richtig
 await wort('sed').click();
 await seite.click('[data-act=pruefen]');
 pruefe(await seite.locator('.rueck').innerText().then(t => t.includes('sed verbindet')), 'Falsch-Rückmeldung zu sed fehlt');
@@ -55,7 +68,8 @@ await seite.click('[data-act=weiter]');
 for (const f of ['volunt', 'sit', 'efficiat', 'caligant']) await wort(f).click();
 await seite.click('[data-act=pruefen]');
 pruefe(await seite.locator('.punkt.ok').count() === 1, 'Prädikat-Schritt sollte „auf Anhieb“ zählen');
-pruefe(await seite.locator('#latein .r-P').count() === 4, 'Prädikate sollten rot gefärbt sein');
+pruefe(await seite.locator('#latein .r-P').count() === 4, 'Prädikate sollten gefärbt sein');
+pruefe(await seite.locator('#latein .r-P.hs').count() === 2, 'volunt und caligant sollten als Hauptsatz-Prädikate unterstrichen sein');
 await seite.click('[data-act=weiter]');
 
 // Schritt 3: Wahl – erst falsch, dann richtig

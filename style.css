@@ -1,7 +1,8 @@
 :root {
   --bg: #f6f2ea; --karte: #fffdf8; --text: #1f1c17; --leise: #6b645a; --linie: #e2dacb;
   --akzent: #8c2f1f; --akzent-text: #fff;
-  --p: #c0392b; --s: #1f5fbf; --o: #2e7d32; --a: #9a5b06; --t: #7044b8; --k: #0b7f78; --v: #7a7368;
+  /* Satzglieder wie im Schulbuch: Prädikat blau, Subjekt rot; Palette Okabe-Ito (farbenblind-sicher) */
+  --p: #0072B2; --pn: #2a8fc9; --s: #D55E00; --o: #009E73; --od: #b7790a; --a: #a5558a; --t: #6b645a; --k: #1f1c17; --v: #6b645a;
   --sel: #ffe58a; --ok: #cdeccf; --bad: #f8c9c3; --fokus: #1f5fbf;
   --lehrer: #f1ead9; --tipp: #fff4cc;
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
@@ -12,7 +13,7 @@
   :root {
     --bg: #17161b; --karte: #212026; --text: #ece7de; --leise: #a39d92; --linie: #35333c;
     --akzent: #e07a5f; --akzent-text: #1a0d08;
-    --p: #ff7b6b; --s: #7cb2ff; --o: #7bd282; --a: #f0ad4e; --t: #c3a6ff; --k: #4fd1c5; --v: #a39d92;
+    --p: #4ea8e6; --pn: #8fcdf2; --s: #ff8c42; --o: #2ec28f; --od: #f2b134; --a: #e49ac4; --t: #a39d92; --k: #ece7de; --v: #a39d92;
     --sel: #6b5a12; --ok: #1f4d27; --bad: #5c231d; --fokus: #7cb2ff;
     --lehrer: #2b2821; --tipp: #3a3216;
   }
@@ -74,6 +75,7 @@ main {
   cursor: pointer; font-size: 15px;
 }
 .navi .mitte small { color: var(--leise); }
+.navi .mitte::after { content: " ▾"; color: var(--leise); }
 
 .modus { display: flex; background: var(--linie); border-radius: 10px; padding: 3px; margin-bottom: 12px; }
 .modus button {
@@ -98,24 +100,26 @@ main {
 }
 .wort:active { background: var(--linie); }
 .pz { color: var(--leise); }
-.r-P { color: var(--p); font-weight: 600; }
-.r-S { color: var(--s); font-weight: 600; }
-.r-O { color: var(--o); }
-.r-A { color: var(--a); }
-.r-T { color: var(--t); }
-.r-K { color: var(--k); }
-.r-V { color: var(--v); font-style: italic; }
-.wort.e { text-decoration: underline 2px var(--k); text-underline-offset: 5px; }
+/* Jede Rolle hat Farbe UND Muster, damit sie auch ohne Farbe lesbar bleibt */
+.r-P { color: var(--p); font-weight: 700; }
+.r-P.hs { text-decoration: underline 2px; text-underline-offset: 5px; }        /* Prädikat des Hauptsatzes */
+.r-P.pn { color: var(--pn); font-style: italic; }                                /* Prädikatsnomen */
+.r-S { color: var(--s); font-weight: 600; text-decoration: underline double 1.5px; text-underline-offset: 4px; }
+.r-O { color: var(--o); text-decoration: underline 1.5px; text-underline-offset: 4px; }
+.r-O.od { color: var(--od); text-decoration-style: dotted; }                     /* Dativobjekt */
+.r-A { color: var(--a); text-decoration: underline dashed 1.5px; text-underline-offset: 4px; }
+.r-T { color: var(--t); font-style: italic; }
+.r-K { color: var(--k); font-weight: 700; }
+.r-V { color: var(--v); font-style: italic; text-decoration: underline wavy 1px; text-underline-offset: 4px; }
+.wort.e { text-decoration: underline 2px; text-underline-offset: 5px; }          /* Einleitewort eines Gliedsatzes */
+.latein { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 .wort.sel { background: var(--sel); }
 .wort.ok { background: var(--ok); }
 .wort.bad { background: var(--bad); }
 .wort.fokus { outline: 2px solid var(--fokus); outline-offset: 1px; }
 
-.legende { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 8px 2px 0; font-size: 13px; }
-.legende span::before { content: "■ "; }
-.legende .l-e::before { content: "__ "; }
-.leg-P { color: var(--p); } .leg-S { color: var(--s); } .leg-O { color: var(--o); } .leg-A { color: var(--a); }
-.leg-T { color: var(--t); } .leg-K { color: var(--k); } .leg-V { color: var(--v); }
+.legende { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 8px 4px 0; font-size: 14px; font-family: var(--serif); }
+.legende .wort { cursor: default; padding: 0; margin: 0; }
 
 /* Satzbild */
 .satzbild { margin-top: 12px; border: 1px solid var(--linie); border-radius: 16px; background: var(--karte); overflow: hidden; }
@@ -152,11 +156,14 @@ main {
 .zaehler { font-size: 13px; color: var(--leise); }
 .frage { margin: 4px 0 10px; font-size: 16px; }
 
-.antippen { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--leise); margin-bottom: 10px; flex-wrap: wrap; }
-.antippen button {
-  border: 1px solid var(--linie); background: none; border-radius: 999px; padding: 4px 10px; font-size: 13px; cursor: pointer;
-}
-.antippen button.an { background: var(--text); color: var(--bg); border-color: var(--text); }
+.antippen { font-size: 13px; color: var(--leise); margin: -4px 0 10px; }
+
+/* Erste Orientierung */
+.intro { background: var(--lehrer); border: 1px solid var(--linie); border-radius: 16px; padding: 14px; margin-bottom: 12px; }
+.intro h3 { margin: 0 0 6px; font-family: var(--serif); font-size: 20px; }
+.intro ol { margin: 0 0 10px; padding-left: 20px; }
+.intro li { margin-bottom: 6px; }
+.intro .probe { font-family: var(--serif); font-size: 17px; }
 
 .optionen { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
 .option {

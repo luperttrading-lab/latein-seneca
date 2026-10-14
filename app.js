@@ -7,20 +7,22 @@
 const ARTEFAKT = 'https://claude.ai/artifact/EM8QYEVRPWn95FFsMkh4tx';
 
 const ROLLEN = { P: 'Prädikat', S: 'Subjekt', O: 'Objekt / Ergänzung', A: 'Adverbiale', T: 'Attribut', K: 'Konnektor / Einleitewort', V: 'Anrede' };
-const LEGENDE = { P: 'Prädikat', S: 'Subjekt', O: 'Objekt', A: 'Adverbiale', T: 'Attribut', K: 'Konnektor', V: 'Anrede' };
+// Legende: jede Rolle so gezeigt, wie sie im Text aussieht (Klasse, Beschriftung)
+const LEGENDE = [['P', 'Prädikat'], ['P hs', 'Prädikat im Hauptsatz'], ['P pn', 'Prädikatsnomen'], ['S', 'Subjekt'], ['O', 'Objekt'], ['O od', 'Dativobjekt'],
+  ['A', 'Adverbiale'], ['T', 'Attribut'], ['K', 'Konnektor'], ['K e', 'Einleitewort'], ['V', 'Anrede']];
 const PHASEN = {
-  gliedern: '1 · Gliedern', verb: '2 · Prädikat', subjekt: '3 · Subjekt', ergaenzung: '4 · Ergänzungen',
-  bezug: '5 · Bezüge', konstr: '6 · Konstruktion', falle: 'Falle!', uebersetzen: '7 · Übersetzen',
+  gliedern: '1 · Teilsätze', verb: '2 · Prädikate', subjekt: '3 · Subjekte', ergaenzung: '4 · Objekte',
+  bezug: '5 · Bezüge (KNG)', konstr: '6 · Konstruktionen', falle: 'Falle!', uebersetzen: '7 · Übersetzen',
 };
 // Welche Satzglied-Farben nach einem gelösten Schritt sichtbar werden
 const PHASE_ROLLEN = { gliedern: ['K'], verb: ['P'], subjekt: ['S'], ergaenzung: ['O'], bezug: ['T'] };
 
 const CHECKLISTE = [
-  ['Gliedern', 'Satzzeichen, Subjunktionen, Relativ- und Fragewörter: Wo beginnen Gliedsätze?'],
+  ['Teilsätze', 'Satzzeichen, Subjunktionen, Relativ- und Fragewörter: Wo beginnen Gliedsätze?'],
   ['Prädikate', 'Alle finiten Verben finden. Eins je Teilsatz – sonst Ellipse?'],
   ['Bestimmen', 'Person, Numerus, Tempus, Modus, Genus verbi. Konjunktiv → warum?'],
   ['Subjekt', 'Nominativ im passenden Numerus – oder steckt es in der Endung?'],
-  ['Ergänzungen', 'Was verlangt das Verb? Akkusativ, Dativ, Infinitiv, Richtung?'],
+  ['Objekte', 'Was verlangt das Verb? Wen oder was? Wem? Infinitiv? Richtung?'],
   ['Bezüge', 'KNG: Was gehört zusammen? Pronomen → Bezugswort?'],
   ['Konstruktionen', 'nd-Formen, Partizipien, AcI, indirekte Frage, Signalwörter?'],
   ['Übersetzen', 'Vom Hauptsatz aus. Erst wörtlich, dann gutes Deutsch. Jedes Wort untergebracht?'],
@@ -44,6 +46,8 @@ function bereite(text) {
       if (wd.p) continue;
       wd.rolle = wd.r[0];
       wd.einl = Pruefung.istEinleitewort(wd);
+      wd.zusatz = wd.rolle === 'P' ? (/Prädikatsnomen/.test(wd.fn) ? 'pn' : (text.saetze && s.teile[wd.c]?.lvl === 0 ? 'hs' : ''))
+        : wd.rolle === 'O' && /Dat\./.test(wd.f) ? 'od' : '';
     }
     for (const st of s.schritte) {
       st._ziel = (st.ziel || []).map(r => finde(s, r));
@@ -146,7 +150,7 @@ let sitzung;
 function neueSitzung() {
   sitzung = {
     auswahl: new Set(), ergebnis: null, rueck: '', tipp: false, versuche: 0,
-    wahlFalsch: new Set(), nachschlagen: false, zeigeW: false, zeigeG: false,
+    wahlFalsch: new Set(), zeigeW: false, zeigeG: false,
     satzbildOffen: sitzung ? sitzung.satzbildOffen : null, aufgedeckt: sitzung ? sitzung.aufgedeckt : new Set(),
   };
 }
@@ -177,7 +181,7 @@ const lemmaKey = wd => wd.l.split(/[ ,(]/)[0].toLowerCase();
 
 function wortKlassen(s, i, rollen, imText) {
   const wd = s.w[i], k = ['wort'];
-  if (rollen.has(wd.rolle)) k.push('r-' + wd.rolle);
+  if (rollen.has(wd.rolle)) { k.push('r-' + wd.rolle); if (wd.zusatz) k.push(wd.zusatz); }
   if (rollen.has('K') && wd.einl) k.push('e');
   if (imText && modus() === 'gefuehrt') {
     const st = schritt(), geloest = fort().g[fort().akt];
@@ -222,6 +226,7 @@ function renderText() {
     <button data-act="modus" data-m="selbst" class="${modus() === 'selbst' ? 'an' : ''}">Selbstständig</button>
   </div>
   <p class="thema"><b>Worum geht’s:</b> ${esc(s.thema)}</p>`;
+  if (!stand.intro) h += renderIntro();
   if (TEXT.auto) h += '<p class="auto">Automatisch erstellt – niemand hat diese Analysen von Hand geprüft. Kommt dir etwas falsch vor, prüf es im Wörterbuch.</p>';
 
   if (stand.satz > 0) {
@@ -232,15 +237,24 @@ function renderText() {
   h += `<div class="latein" id="latein">${woerterHtml(s, 0, s.w.length, rollen, true)}</div>`;
 
   if (rollen.size) {
-    h += '<div class="legende">' + Object.keys(LEGENDE).filter(r => rollen.has(r))
-      .map(r => `<span class="leg-${r}">${LEGENDE[r]}</span>`).join('') +
-      (rollen.has('K') ? '<span class="l-e leg-K">Einleitewort</span>' : '') + '</div>';
+    const vorhanden = new Set(s.w.filter(wd => !wd.p && rollen.has(wd.rolle)).map(wd => wd.rolle + (wd.einl && wd.rolle === 'K' ? ' e' : wd.zusatz ? ' ' + wd.zusatz : '')));
+    h += '<div class="legende">' + LEGENDE.filter(([kl]) => vorhanden.has(kl) || (kl.length === 1 && [...vorhanden].some(v => v.startsWith(kl + ' '))))
+      .map(([kl, name]) => `<span class="wort r-${kl}">${name}</span>`).join('') + '</div>';
   }
 
   // Aufgabe direkt unter den Text: Antippen und Prüfen ohne Scrollen; das Satzbild ist Nachschlagewerk
   h += modus() === 'selbst' ? renderCheckliste() : renderKarte();
   h += renderSatzbild(s, rollen);
   $('haupt').innerHTML = h;
+}
+
+function renderIntro() {
+  return `<div class="intro"><h3>So arbeitest du hier</h3><ol>
+    <li>Jeder Satz wird in festen Schritten zerlegt, wie es die Lateindidaktik lehrt: erst Teilsätze, dann Prädikate, dann Subjekte, dann der Rest. Übersetzt wird zuletzt.</li>
+    <li>Die Karte unter dem Text stellt die Aufgabe. Tippe die gesuchten Wörter im Text an, dann auf „Prüfen“. Falsch getippte Wörter erklärt dir die App.</li>
+    <li>Ein Wort <b>lange drücken</b> schlägt es nach: erst Wörterbuch und Bedeutung, Form und Funktion deckst du auf, wenn du sie selbst bestimmt hast.</li>
+    <li>Jeder gelöste Schritt färbt den Satz wie im Schulbuch: <span class="probe"><span class="wort r-P">Prädikat</span> <span class="wort r-S">Subjekt</span> <span class="wort r-O">Objekt</span></span> …</li>
+  </ol><button class="btn" data-act="intro-weg">Los geht’s</button></div>`;
 }
 
 function renderSatzbild(s, rollen) {
@@ -275,9 +289,7 @@ function renderKarte() {
     <p class="frage">${esc(st.frage)}</p>`;
 
   if ((st.typ === 'tippen' || st.typ === 'bezug') && !status) {
-    h += `<div class="antippen">Wort antippen =
-      <button data-act="nachschlagen" data-v="0" class="${sitzung.nachschlagen ? '' : 'an'}">auswählen</button>
-      <button data-act="nachschlagen" data-v="1" class="${sitzung.nachschlagen ? 'an' : ''}">nachschlagen</button></div>`;
+    h += '<div class="antippen">Antippen wählt aus · lange drücken schlägt nach</div>';
   }
   if (st.typ === 'wahl') {
     h += '<div class="optionen">' + st.opts.map((o, i) => {
@@ -633,6 +645,7 @@ function zumText() {
 }
 
 document.addEventListener('click', e => {
+  if (langGedrueckt) { langGedrueckt = false; return; }   // der Klick, der ein langes Drücken abschließt, zählt nicht
   const el = e.target.closest('[data-act], [data-i], [data-tab]');
   if (!el || !geladen) return;
 
@@ -644,8 +657,7 @@ document.addEventListener('click', e => {
   // Wort im Text angetippt
   if (!act && el.dataset.i !== undefined) {
     const i = Number(el.dataset.i), st = schritt(), offen = !fort().g[fort().akt];
-    const auswahl = el.closest('#latein') && modus() === 'gefuehrt' && offen && !sitzung.nachschlagen &&
-      (st.typ === 'tippen' || st.typ === 'bezug');
+    const auswahl = el.closest('#latein') && modus() === 'gefuehrt' && offen && (st.typ === 'tippen' || st.typ === 'bezug');
     if (!auswahl) return zeigeWort(i);
     if (i === st._fokus) return;
     if (st.typ === 'bezug') sitzung.auswahl = sitzung.auswahl.has(i) ? new Set() : new Set([i]);
@@ -674,7 +686,7 @@ document.addEventListener('click', e => {
     }
     case 'schliessen': return schliesseBlatt();
     case 'modus': stand.modus[s.id] = el.dataset.m; neueSitzung(); speichere(); return render();
-    case 'nachschlagen': sitzung.nachschlagen = el.dataset.v === '1'; return render();
+    case 'intro-weg': stand.intro = true; speichere(); return render();
     case 'tipp': sitzung.tipp = true; return render();
     case 'pruefen': return pruefe();
     case 'loesung':
@@ -733,6 +745,21 @@ document.addEventListener('click', e => {
     case 'abfrage-ende': abfrage = null; return render();
   }
 });
+
+// Langes Drücken auf ein Wort = nachschlagen (auch während einer Tipp-Aufgabe)
+let langTimer = null, langGedrueckt = false, langStart = null;
+document.addEventListener('pointerdown', e => {
+  const el = e.target.closest('#latein .wort, .zwoerter .wort');
+  langGedrueckt = false;
+  if (!el || !geladen) return;
+  langStart = [e.clientX, e.clientY];
+  clearTimeout(langTimer);
+  langTimer = setTimeout(() => { langGedrueckt = true; zeigeWort(Number(el.dataset.i)); }, 450);
+});
+document.addEventListener('pointermove', e => {
+  if (langTimer && langStart && Math.hypot(e.clientX - langStart[0], e.clientY - langStart[1]) > 10) { clearTimeout(langTimer); langTimer = null; }
+});
+for (const ev of ['pointerup', 'pointercancel']) document.addEventListener(ev, () => { clearTimeout(langTimer); langTimer = null; });
 
 document.addEventListener('change', e => {
   if (e.target.id === 'import-datei' && e.target.files[0]) {

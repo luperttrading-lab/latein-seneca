@@ -89,6 +89,7 @@ const geladen = () => seite.waitForFunction(() => !document.querySelector('.lade
 await seite.goto(url);
 await geladen();
 pruefe((await seite.locator('.mitte').innerText()).includes('von 8'), 'Eingebauter Text nicht aktiv');
+await seite.click('[data-act=intro-weg]');
 await seite.click('[data-act=vor]');                          // Fortschritt im eingebauten Text: Satz 2
 await seite.waitForFunction(() => window.__schreibe.some(p => p.endsWith('/stand')), null, { timeout: 5000 }).catch(() => fehler.push('Stand wurde nicht ins Konto geschrieben'));
 

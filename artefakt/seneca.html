@@ -4,7 +4,8 @@
 :root {
   --bg: #f6f2ea; --karte: #fffdf8; --text: #1f1c17; --leise: #6b645a; --linie: #e2dacb;
   --akzent: #8c2f1f; --akzent-text: #fff;
-  --p: #c0392b; --s: #1f5fbf; --o: #2e7d32; --a: #9a5b06; --t: #7044b8; --k: #0b7f78; --v: #7a7368;
+  /* Satzglieder wie im Schulbuch: Prädikat blau, Subjekt rot; Palette Okabe-Ito (farbenblind-sicher) */
+  --p: #0072B2; --pn: #2a8fc9; --s: #D55E00; --o: #009E73; --od: #b7790a; --a: #a5558a; --t: #6b645a; --k: #1f1c17; --v: #6b645a;
   --sel: #ffe58a; --ok: #cdeccf; --bad: #f8c9c3; --fokus: #1f5fbf;
   --lehrer: #f1ead9; --tipp: #fff4cc;
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
@@ -15,7 +16,7 @@
   :root {
     --bg: #17161b; --karte: #212026; --text: #ece7de; --leise: #a39d92; --linie: #35333c;
     --akzent: #e07a5f; --akzent-text: #1a0d08;
-    --p: #ff7b6b; --s: #7cb2ff; --o: #7bd282; --a: #f0ad4e; --t: #c3a6ff; --k: #4fd1c5; --v: #a39d92;
+    --p: #4ea8e6; --pn: #8fcdf2; --s: #ff8c42; --o: #2ec28f; --od: #f2b134; --a: #e49ac4; --t: #a39d92; --k: #ece7de; --v: #a39d92;
     --sel: #6b5a12; --ok: #1f4d27; --bad: #5c231d; --fokus: #7cb2ff;
     --lehrer: #2b2821; --tipp: #3a3216;
   }
@@ -77,6 +78,7 @@ main {
   cursor: pointer; font-size: 15px;
 }
 .navi .mitte small { color: var(--leise); }
+.navi .mitte::after { content: " ▾"; color: var(--leise); }
 
 .modus { display: flex; background: var(--linie); border-radius: 10px; padding: 3px; margin-bottom: 12px; }
 .modus button {
@@ -101,24 +103,26 @@ main {
 }
 .wort:active { background: var(--linie); }
 .pz { color: var(--leise); }
-.r-P { color: var(--p); font-weight: 600; }
-.r-S { color: var(--s); font-weight: 600; }
-.r-O { color: var(--o); }
-.r-A { color: var(--a); }
-.r-T { color: var(--t); }
-.r-K { color: var(--k); }
-.r-V { color: var(--v); font-style: italic; }
-.wort.e { text-decoration: underline 2px var(--k); text-underline-offset: 5px; }
+/* Jede Rolle hat Farbe UND Muster, damit sie auch ohne Farbe lesbar bleibt */
+.r-P { color: var(--p); font-weight: 700; }
+.r-P.hs { text-decoration: underline 2px; text-underline-offset: 5px; }        /* Prädikat des Hauptsatzes */
+.r-P.pn { color: var(--pn); font-style: italic; }                                /* Prädikatsnomen */
+.r-S { color: var(--s); font-weight: 600; text-decoration: underline double 1.5px; text-underline-offset: 4px; }
+.r-O { color: var(--o); text-decoration: underline 1.5px; text-underline-offset: 4px; }
+.r-O.od { color: var(--od); text-decoration-style: dotted; }                     /* Dativobjekt */
+.r-A { color: var(--a); text-decoration: underline dashed 1.5px; text-underline-offset: 4px; }
+.r-T { color: var(--t); font-style: italic; }
+.r-K { color: var(--k); font-weight: 700; }
+.r-V { color: var(--v); font-style: italic; text-decoration: underline wavy 1px; text-underline-offset: 4px; }
+.wort.e { text-decoration: underline 2px; text-underline-offset: 5px; }          /* Einleitewort eines Gliedsatzes */
+.latein { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 .wort.sel { background: var(--sel); }
 .wort.ok { background: var(--ok); }
 .wort.bad { background: var(--bad); }
 .wort.fokus { outline: 2px solid var(--fokus); outline-offset: 1px; }
 
-.legende { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 8px 2px 0; font-size: 13px; }
-.legende span::before { content: "■ "; }
-.legende .l-e::before { content: "__ "; }
-.leg-P { color: var(--p); } .leg-S { color: var(--s); } .leg-O { color: var(--o); } .leg-A { color: var(--a); }
-.leg-T { color: var(--t); } .leg-K { color: var(--k); } .leg-V { color: var(--v); }
+.legende { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 8px 4px 0; font-size: 14px; font-family: var(--serif); }
+.legende .wort { cursor: default; padding: 0; margin: 0; }
 
 /* Satzbild */
 .satzbild { margin-top: 12px; border: 1px solid var(--linie); border-radius: 16px; background: var(--karte); overflow: hidden; }
@@ -155,11 +159,14 @@ main {
 .zaehler { font-size: 13px; color: var(--leise); }
 .frage { margin: 4px 0 10px; font-size: 16px; }
 
-.antippen { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--leise); margin-bottom: 10px; flex-wrap: wrap; }
-.antippen button {
-  border: 1px solid var(--linie); background: none; border-radius: 999px; padding: 4px 10px; font-size: 13px; cursor: pointer;
-}
-.antippen button.an { background: var(--text); color: var(--bg); border-color: var(--text); }
+.antippen { font-size: 13px; color: var(--leise); margin: -4px 0 10px; }
+
+/* Erste Orientierung */
+.intro { background: var(--lehrer); border: 1px solid var(--linie); border-radius: 16px; padding: 14px; margin-bottom: 12px; }
+.intro h3 { margin: 0 0 6px; font-family: var(--serif); font-size: 20px; }
+.intro ol { margin: 0 0 10px; padding-left: 20px; }
+.intro li { margin-bottom: 6px; }
+.intro .probe { font-family: var(--serif); font-size: 17px; }
 
 .optionen { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
 .option {
@@ -351,7 +358,7 @@ h3 { font-size: 17px; margin: 18px 0 6px; }
 .tabs { padding-bottom: 6px; }
 main { padding-bottom: 96px; }
 </style>
-<script>const APP_VERSION = '2.0';</script>
+<script>const APP_VERSION = '2.1';</script>
 <header class="kopf">
   <div class="werk"><span class="autor" id="autor">Seneca</span> <span class="schrift" id="schrift">De vita beata</span></div>
   <button class="version" id="version" type="button" aria-label="Nach Update suchen"></button>
@@ -1563,20 +1570,22 @@ Prüfe jede Form im Zusammenhang der ganzen Seite. Antworte nur mit dem JSON-Obj
 const ARTEFAKT = 'https://claude.ai/artifact/EM8QYEVRPWn95FFsMkh4tx';
 
 const ROLLEN = { P: 'Prädikat', S: 'Subjekt', O: 'Objekt / Ergänzung', A: 'Adverbiale', T: 'Attribut', K: 'Konnektor / Einleitewort', V: 'Anrede' };
-const LEGENDE = { P: 'Prädikat', S: 'Subjekt', O: 'Objekt', A: 'Adverbiale', T: 'Attribut', K: 'Konnektor', V: 'Anrede' };
+// Legende: jede Rolle so gezeigt, wie sie im Text aussieht (Klasse, Beschriftung)
+const LEGENDE = [['P', 'Prädikat'], ['P hs', 'Prädikat im Hauptsatz'], ['P pn', 'Prädikatsnomen'], ['S', 'Subjekt'], ['O', 'Objekt'], ['O od', 'Dativobjekt'],
+  ['A', 'Adverbiale'], ['T', 'Attribut'], ['K', 'Konnektor'], ['K e', 'Einleitewort'], ['V', 'Anrede']];
 const PHASEN = {
-  gliedern: '1 · Gliedern', verb: '2 · Prädikat', subjekt: '3 · Subjekt', ergaenzung: '4 · Ergänzungen',
-  bezug: '5 · Bezüge', konstr: '6 · Konstruktion', falle: 'Falle!', uebersetzen: '7 · Übersetzen',
+  gliedern: '1 · Teilsätze', verb: '2 · Prädikate', subjekt: '3 · Subjekte', ergaenzung: '4 · Objekte',
+  bezug: '5 · Bezüge (KNG)', konstr: '6 · Konstruktionen', falle: 'Falle!', uebersetzen: '7 · Übersetzen',
 };
 // Welche Satzglied-Farben nach einem gelösten Schritt sichtbar werden
 const PHASE_ROLLEN = { gliedern: ['K'], verb: ['P'], subjekt: ['S'], ergaenzung: ['O'], bezug: ['T'] };
 
 const CHECKLISTE = [
-  ['Gliedern', 'Satzzeichen, Subjunktionen, Relativ- und Fragewörter: Wo beginnen Gliedsätze?'],
+  ['Teilsätze', 'Satzzeichen, Subjunktionen, Relativ- und Fragewörter: Wo beginnen Gliedsätze?'],
   ['Prädikate', 'Alle finiten Verben finden. Eins je Teilsatz – sonst Ellipse?'],
   ['Bestimmen', 'Person, Numerus, Tempus, Modus, Genus verbi. Konjunktiv → warum?'],
   ['Subjekt', 'Nominativ im passenden Numerus – oder steckt es in der Endung?'],
-  ['Ergänzungen', 'Was verlangt das Verb? Akkusativ, Dativ, Infinitiv, Richtung?'],
+  ['Objekte', 'Was verlangt das Verb? Wen oder was? Wem? Infinitiv? Richtung?'],
   ['Bezüge', 'KNG: Was gehört zusammen? Pronomen → Bezugswort?'],
   ['Konstruktionen', 'nd-Formen, Partizipien, AcI, indirekte Frage, Signalwörter?'],
   ['Übersetzen', 'Vom Hauptsatz aus. Erst wörtlich, dann gutes Deutsch. Jedes Wort untergebracht?'],
@@ -1600,6 +1609,8 @@ function bereite(text) {
       if (wd.p) continue;
       wd.rolle = wd.r[0];
       wd.einl = Pruefung.istEinleitewort(wd);
+      wd.zusatz = wd.rolle === 'P' ? (/Prädikatsnomen/.test(wd.fn) ? 'pn' : (text.saetze && s.teile[wd.c]?.lvl === 0 ? 'hs' : ''))
+        : wd.rolle === 'O' && /Dat\./.test(wd.f) ? 'od' : '';
     }
     for (const st of s.schritte) {
       st._ziel = (st.ziel || []).map(r => finde(s, r));
@@ -1702,7 +1713,7 @@ let sitzung;
 function neueSitzung() {
   sitzung = {
     auswahl: new Set(), ergebnis: null, rueck: '', tipp: false, versuche: 0,
-    wahlFalsch: new Set(), nachschlagen: false, zeigeW: false, zeigeG: false,
+    wahlFalsch: new Set(), zeigeW: false, zeigeG: false,
     satzbildOffen: sitzung ? sitzung.satzbildOffen : null, aufgedeckt: sitzung ? sitzung.aufgedeckt : new Set(),
   };
 }
@@ -1733,7 +1744,7 @@ const lemmaKey = wd => wd.l.split(/[ ,(]/)[0].toLowerCase();
 
 function wortKlassen(s, i, rollen, imText) {
   const wd = s.w[i], k = ['wort'];
-  if (rollen.has(wd.rolle)) k.push('r-' + wd.rolle);
+  if (rollen.has(wd.rolle)) { k.push('r-' + wd.rolle); if (wd.zusatz) k.push(wd.zusatz); }
   if (rollen.has('K') && wd.einl) k.push('e');
   if (imText && modus() === 'gefuehrt') {
     const st = schritt(), geloest = fort().g[fort().akt];
@@ -1778,6 +1789,7 @@ function renderText() {
     <button data-act="modus" data-m="selbst" class="${modus() === 'selbst' ? 'an' : ''}">Selbstständig</button>
   </div>
   <p class="thema"><b>Worum geht’s:</b> ${esc(s.thema)}</p>`;
+  if (!stand.intro) h += renderIntro();
   if (TEXT.auto) h += '<p class="auto">Automatisch erstellt – niemand hat diese Analysen von Hand geprüft. Kommt dir etwas falsch vor, prüf es im Wörterbuch.</p>';
 
   if (stand.satz > 0) {
@@ -1788,15 +1800,24 @@ function renderText() {
   h += `<div class="latein" id="latein">${woerterHtml(s, 0, s.w.length, rollen, true)}</div>`;
 
   if (rollen.size) {
-    h += '<div class="legende">' + Object.keys(LEGENDE).filter(r => rollen.has(r))
-      .map(r => `<span class="leg-${r}">${LEGENDE[r]}</span>`).join('') +
-      (rollen.has('K') ? '<span class="l-e leg-K">Einleitewort</span>' : '') + '</div>';
+    const vorhanden = new Set(s.w.filter(wd => !wd.p && rollen.has(wd.rolle)).map(wd => wd.rolle + (wd.einl && wd.rolle === 'K' ? ' e' : wd.zusatz ? ' ' + wd.zusatz : '')));
+    h += '<div class="legende">' + LEGENDE.filter(([kl]) => vorhanden.has(kl) || (kl.length === 1 && [...vorhanden].some(v => v.startsWith(kl + ' '))))
+      .map(([kl, name]) => `<span class="wort r-${kl}">${name}</span>`).join('') + '</div>';
   }
 
   // Aufgabe direkt unter den Text: Antippen und Prüfen ohne Scrollen; das Satzbild ist Nachschlagewerk
   h += modus() === 'selbst' ? renderCheckliste() : renderKarte();
   h += renderSatzbild(s, rollen);
   $('haupt').innerHTML = h;
+}
+
+function renderIntro() {
+  return `<div class="intro"><h3>So arbeitest du hier</h3><ol>
+    <li>Jeder Satz wird in festen Schritten zerlegt, wie es die Lateindidaktik lehrt: erst Teilsätze, dann Prädikate, dann Subjekte, dann der Rest. Übersetzt wird zuletzt.</li>
+    <li>Die Karte unter dem Text stellt die Aufgabe. Tippe die gesuchten Wörter im Text an, dann auf „Prüfen“. Falsch getippte Wörter erklärt dir die App.</li>
+    <li>Ein Wort <b>lange drücken</b> schlägt es nach: erst Wörterbuch und Bedeutung, Form und Funktion deckst du auf, wenn du sie selbst bestimmt hast.</li>
+    <li>Jeder gelöste Schritt färbt den Satz wie im Schulbuch: <span class="probe"><span class="wort r-P">Prädikat</span> <span class="wort r-S">Subjekt</span> <span class="wort r-O">Objekt</span></span> …</li>
+  </ol><button class="btn" data-act="intro-weg">Los geht’s</button></div>`;
 }
 
 function renderSatzbild(s, rollen) {
@@ -1831,9 +1852,7 @@ function renderKarte() {
     <p class="frage">${esc(st.frage)}</p>`;
 
   if ((st.typ === 'tippen' || st.typ === 'bezug') && !status) {
-    h += `<div class="antippen">Wort antippen =
-      <button data-act="nachschlagen" data-v="0" class="${sitzung.nachschlagen ? '' : 'an'}">auswählen</button>
-      <button data-act="nachschlagen" data-v="1" class="${sitzung.nachschlagen ? 'an' : ''}">nachschlagen</button></div>`;
+    h += '<div class="antippen">Antippen wählt aus · lange drücken schlägt nach</div>';
   }
   if (st.typ === 'wahl') {
     h += '<div class="optionen">' + st.opts.map((o, i) => {
@@ -2189,6 +2208,7 @@ function zumText() {
 }
 
 document.addEventListener('click', e => {
+  if (langGedrueckt) { langGedrueckt = false; return; }   // der Klick, der ein langes Drücken abschließt, zählt nicht
   const el = e.target.closest('[data-act], [data-i], [data-tab]');
   if (!el || !geladen) return;
 
@@ -2200,8 +2220,7 @@ document.addEventListener('click', e => {
   // Wort im Text angetippt
   if (!act && el.dataset.i !== undefined) {
     const i = Number(el.dataset.i), st = schritt(), offen = !fort().g[fort().akt];
-    const auswahl = el.closest('#latein') && modus() === 'gefuehrt' && offen && !sitzung.nachschlagen &&
-      (st.typ === 'tippen' || st.typ === 'bezug');
+    const auswahl = el.closest('#latein') && modus() === 'gefuehrt' && offen && (st.typ === 'tippen' || st.typ === 'bezug');
     if (!auswahl) return zeigeWort(i);
     if (i === st._fokus) return;
     if (st.typ === 'bezug') sitzung.auswahl = sitzung.auswahl.has(i) ? new Set() : new Set([i]);
@@ -2230,7 +2249,7 @@ document.addEventListener('click', e => {
     }
     case 'schliessen': return schliesseBlatt();
     case 'modus': stand.modus[s.id] = el.dataset.m; neueSitzung(); speichere(); return render();
-    case 'nachschlagen': sitzung.nachschlagen = el.dataset.v === '1'; return render();
+    case 'intro-weg': stand.intro = true; speichere(); return render();
     case 'tipp': sitzung.tipp = true; return render();
     case 'pruefen': return pruefe();
     case 'loesung':
@@ -2289,6 +2308,21 @@ document.addEventListener('click', e => {
     case 'abfrage-ende': abfrage = null; return render();
   }
 });
+
+// Langes Drücken auf ein Wort = nachschlagen (auch während einer Tipp-Aufgabe)
+let langTimer = null, langGedrueckt = false, langStart = null;
+document.addEventListener('pointerdown', e => {
+  const el = e.target.closest('#latein .wort, .zwoerter .wort');
+  langGedrueckt = false;
+  if (!el || !geladen) return;
+  langStart = [e.clientX, e.clientY];
+  clearTimeout(langTimer);
+  langTimer = setTimeout(() => { langGedrueckt = true; zeigeWort(Number(el.dataset.i)); }, 450);
+});
+document.addEventListener('pointermove', e => {
+  if (langTimer && langStart && Math.hypot(e.clientX - langStart[0], e.clientY - langStart[1]) > 10) { clearTimeout(langTimer); langTimer = null; }
+});
+for (const ev of ['pointerup', 'pointercancel']) document.addEventListener(ev, () => { clearTimeout(langTimer); langTimer = null; });
 
 document.addEventListener('change', e => {
   if (e.target.id === 'import-datei' && e.target.files[0]) {
