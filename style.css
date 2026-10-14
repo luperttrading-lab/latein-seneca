@@ -45,8 +45,10 @@ button { font: inherit; color: inherit; }
 
 main {
   max-width: 680px; margin: 0 auto;
-  padding: 12px 16px calc(env(safe-area-inset-bottom) + 96px);
+  padding-block: 12px calc(env(safe-area-inset-bottom) + 96px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
+.lade { color: var(--leise); text-align: center; padding: 48px 0; }
 
 /* Reiter unten */
 .tabs {
@@ -55,8 +57,8 @@ main {
   padding: 6px 8px calc(env(safe-area-inset-bottom) + 6px);
 }
 .tabs button {
-  flex: 1; background: none; border: 0; padding: 10px 4px; border-radius: 10px;
-  color: var(--leise); font-weight: 600; font-size: 15px; cursor: pointer;
+  flex: 1; background: none; border: 0; padding: 10px 2px; border-radius: 10px;
+  color: var(--leise); font-weight: 600; font-size: 14px; cursor: pointer; white-space: nowrap;
 }
 .tabs button.an { color: var(--akzent); background: var(--bg); }
 
@@ -305,3 +307,39 @@ h3 { font-size: 17px; margin: 18px 0 6px; }
 .update.info { background: #2d2d33; color: #f2f2f7; font-weight: 500; }
 .update.unten { top: auto; bottom: max(env(safe-area-inset-bottom), 12px); }
 .update .btn { width: auto; padding: 8px 14px; font-size: 15px; background: #06240e; color: #fff; }
+
+/* Neue Seite (Werkstatt) */
+.ws { display: flex; flex-direction: column; gap: 12px; }
+.ws h2 { margin-bottom: 0; }
+.ws h3 { font-family: var(--serif); font-size: 20px; margin: 0; display: flex; align-items: baseline; gap: 10px; }
+.ws .nr { font-family: var(--sans); font-size: 13px; font-weight: 700; color: var(--akzent); border: 1.5px solid currentColor; border-radius: 999px; width: 24px; height: 24px; display: inline-grid; place-items: center; flex: none; }
+.ws p { margin: 0; }
+.ws .schritt { background: var(--karte); border: 1px solid var(--linie); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ws .schritt.zu { opacity: .55; }
+.ws .schritt.zu .nur-offen { display: none; }
+.ws .knoepfe { align-items: center; }
+.ws .vorschau { display: flex; flex-wrap: wrap; gap: 8px; }
+.ws .vorschau img { height: 96px; width: auto; border-radius: 8px; border: 1px solid var(--linie); }
+.ws textarea { min-height: 0; margin: 0; }
+.ws textarea.latein { font-family: var(--serif); font-size: 18px; line-height: 1.5; padding: 8px 10px; }
+.ws input[type=text] { width: 100%; border: 1.5px solid var(--linie); border-radius: 10px; padding: 8px 10px; font: 16px var(--sans); background: var(--bg); color: var(--text); }
+.ws .felder { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.ws .felder label { font-size: 12px; font-weight: 700; color: var(--leise); text-transform: uppercase; letter-spacing: .03em; display: flex; flex-direction: column; gap: 4px; }
+.ws .einheiten { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.ws .einheit { border-top: 1px solid var(--linie); padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.ws .ekopf { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--leise); }
+.ws .ekopf input { width: 72px; padding: 4px 6px; font-size: 14px; }
+.ws .ekopf .weg { margin-left: auto; border: 0; background: none; color: var(--leise); cursor: pointer; font-size: 14px; padding: 4px 6px; }
+.ws .unsicher { font-size: 14px; color: var(--a); }
+.ws .liste { list-style: none; padding: 0; margin: 0; }
+.ws .liste li { display: grid; grid-template-columns: 34px 1fr auto; gap: 4px 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--linie); }
+.ws .snr { font-weight: 700; font-variant-numeric: tabular-nums; }
+.ws .sanf { font-family: var(--serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.ws .sstat { font-size: 13px; font-weight: 600; white-space: nowrap; }
+.ws .smeld { grid-column: 2 / span 2; font-size: 13px; color: var(--p); }
+.ws .s-fertig { color: var(--o); } .ws .s-laeuft { color: var(--a); } .ws .s-fehler { color: var(--p); } .ws .s-offen { color: var(--leise); }
+.ws .ergebnis { border-radius: 10px; padding: 10px 12px; font-size: 15px; }
+.ws .ergebnis.gut { background: var(--ok); } .ws .ergebnis.schlecht { background: var(--bad); }
+.ws .datei { display: inline-block; }
+.nurpages { margin-top: 12px; }
+.nurpages a { color: var(--akzent); }

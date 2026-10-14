@@ -1,9 +1,10 @@
-// Werkstatt → App: Foto erkennen, analysieren (Claude nachgebaut), kopieren, in der App importieren.
-// Aufruf: node tools/baue_werkstatt.mjs && node tests/werkstatt_rundgang.mjs [bildordner]
+// Artefakt-Fassung (claude.ai): Foto → Text prüfen → Analyse (Claude nachgebaut) → in die Bibliothek →
+// übersetzen → Stand im Konto (db nachgebaut) → Neuladen → Text entfernen.
+// Aufruf: node tools/baue_artefakt.mjs && node tests/werkstatt_rundgang.mjs [bildordner]
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
-import { extname, join } from 'node:path';
+import { join } from 'node:path';
 import { execSync } from 'node:child_process';
 import vm from 'node:vm';
 
@@ -18,32 +19,27 @@ vm.runInNewContext(readFileSync(join(wurzel, 'daten.js'), 'utf8') + '\nthis.TEXT
 const SAETZE = JSON.parse(JSON.stringify(ctx.TEXTE[0].saetze.slice(0, 3)));
 const einheiten = SAETZE.map(s => ({ ref: s.ref, text: s.w.map(x => x.p ? x.p : ' ' + x.t).join('').trim() }));
 
-// Die Werkstatt-Datei wird beim Veröffentlichen in ein Gerüst gesetzt – hier nachgebildet
-const geruest = html => `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>${html}</body></html>`;
-const TYPEN = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
+// Das Gerüst, in das die Plattform die Seite setzt – hier nachgebildet
+const geruest = html => `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>[hidden]{display:none!important}body{margin:0}</style></head><body>${html}</body></html>`;
 const server = createServer(async (req, res) => {
-  const pfad = decodeURIComponent(req.url.split('?')[0]);
   try {
-    if (pfad === '/werkstatt') {
-      res.writeHead(200, { 'content-type': 'text/html' });
-      return res.end(geruest(await readFile(join(wurzel, 'werkstatt/werkstatt.html'), 'utf8')));
-    }
-    const datei = join(wurzel, pfad.replace(/\/$/, '/index.html'));
-    res.writeHead(200, { 'content-type': TYPEN[extname(datei)] || 'text/plain' }); res.end(await readFile(datei));
+    res.writeHead(200, { 'content-type': 'text/html' });
+    res.end(geruest(await readFile(join(wurzel, 'artefakt/seneca.html'), 'utf8')));
   } catch { res.writeHead(404); res.end(); }
 }).listen(0);
-const url = `http://localhost:${server.address().port}`;
+const url = `http://localhost:${server.address().port}/`;
 
 const fehler = [];
 const pruefe = (bed, text) => { if (!bed) fehler.push(text); };
 const browser = await chromium.launch();
 const kontext = await browser.newContext({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 if (bilder) await mkdir(bilder, { recursive: true });
+const seite = await kontext.newPage();
+seite.on('pageerror', e => fehler.push('JS: ' + e.message));
+seite.on('console', m => { if (m.type() === 'error') fehler.push('Konsole: ' + m.text()); });
 
-// ───────── Werkstatt
-const ws = await kontext.newPage();
-ws.on('pageerror', e => fehler.push('Werkstatt JS: ' + e.message));
-await ws.addInitScript(({ SAETZE, einheiten }) => {
+// window.claude nachgebaut: sample (Claude), db (Speicher in sessionStorage – überlebt Neuladen), user
+await seite.addInitScript(({ SAETZE, einheiten }) => {
   const aufrufe = window.__aufrufe = [];
   const fake = async () => ({ text: '', truncated: false });
   fake.limits = async () => ({ maxPromptBytes: 262144, images: { maxCount: 5, maxInputBytes: 2e7, mediaTypes: ['image/jpeg', 'image/png'] } });
@@ -62,69 +58,109 @@ await ws.addInitScript(({ SAETZE, einheiten }) => {
     if (n === 2 && !nachbesserung) delete satz.gut;          // erster Versuch absichtlich unvollständig
     return satz;
   };
-  window.claude = { use: async n => (n === 'sample' ? fake : n === 'downloads' ? { save: async () => {} } : null) };
+  const lade = () => JSON.parse(sessionStorage.getItem('fakedb') || '{}');
+  const sichere = d => sessionStorage.setItem('fakedb', JSON.stringify(d));
+  const schreibe = window.__schreibe = [];
+  const docRef = pfad => ({
+    id: pfad.split('/').pop(), path: pfad,
+    async get() { const d = lade()[pfad]; return { id: pfad.split('/').pop(), exists: !!d, data: () => d && Object.freeze(JSON.parse(JSON.stringify(d))) }; },
+    async set(data) { if (JSON.stringify(data).length > 262144) throw { code: 'invalid_argument' }; const d = lade(); d[pfad] = JSON.parse(JSON.stringify(data)); sichere(d); schreibe.push(pfad); },
+    async delete() { const d = lade(); delete d[pfad]; sichere(d); },
+    collection: p => colRef(pfad + '/' + p),
+  });
+  const colRef = pfad => ({
+    path: pfad, doc: id => docRef(pfad + '/' + (id || Math.random().toString(36).slice(2))),
+    async get() { const docs = Object.entries(lade()).filter(([k]) => k.startsWith(pfad + '/') && !k.slice(pfad.length + 1).includes('/')).map(([k, v]) => ({ id: k.split('/').pop(), exists: true, data: () => v })); return { docs, size: docs.length, empty: !docs.length }; },
+  });
+  const db = { doc: p => { if (p.split('/').length % 2) throw new TypeError('Dokumentpfad braucht gerade Segmentzahl: ' + p); return docRef(p); },
+    collection: p => { if (p.split('/').length % 2 === 0) throw new TypeError('Sammlungspfad braucht ungerade Segmentzahl: ' + p); return colRef(p); } };
+  const user = { id: async () => 'u_test', isOwner: async () => true };
+  window.claude = { use: async n => ({ sample: fake, db, user })[n] || null };
 }, { SAETZE, einheiten });
 
-await ws.goto(url + '/werkstatt');
-await ws.waitForFunction(() => !document.getElementById('foto-label').hidden);
-await ws.setInputFiles('#foto', join(wurzel, 'icon-512.png'));
-await ws.click('#erkennen');
-await ws.waitForSelector('#einheiten .einheit');
-pruefe(await ws.locator('#einheiten .einheit').count() === 3, 'Werkstatt: 3 Einheiten erwartet');
-pruefe(await ws.evaluate(() => window.__aufrufe[0]?.bilder) === 3, 'Werkstatt: Foto sollte in 3 Streifen gehen');
-pruefe((await ws.locator('#unsicher').innerText()).includes('inpellit'), 'Werkstatt: Unsicher-Hinweis fehlt');
-if (bilder) await ws.screenshot({ path: `${bilder}/w1-pruefen.png` });
+process.on('uncaughtException', async e => {
+  console.log('ABBRUCH:', e.message.split('\n')[0], '|', (e.stack || '').split('\n').find(l => l.includes('werkstatt_rundgang')) || '');
+  if (fehler.length) console.log('FEHLER BISHER:\n' + fehler.join('\n'));
+  if (bilder) await seite.screenshot({ path: `${bilder}/abbruch.png` }).catch(() => {});
+  process.exit(1);
+});
+process.on('unhandledRejection', e => { console.log('ABBRUCH:', String(e?.message || e).split('\n')[0]); if (fehler.length) console.log('FEHLER BISHER:\n' + fehler.join('\n')); process.exit(1); });
+const geladen = () => seite.waitForFunction(() => !document.querySelector('.lade') && document.getElementById('haupt').children.length > 0);
+await seite.goto(url);
+await geladen();
+pruefe((await seite.locator('.mitte').innerText()).includes('von 8'), 'Eingebauter Text nicht aktiv');
+await seite.click('[data-act=vor]');                          // Fortschritt im eingebauten Text: Satz 2
+await seite.waitForFunction(() => window.__schreibe.some(p => p.endsWith('/stand')), null, { timeout: 5000 }).catch(() => fehler.push('Stand wurde nicht ins Konto geschrieben'));
 
-await ws.click('#analysieren');
-await ws.waitForFunction(() => !document.getElementById('s4').classList.contains('zu'), null, { timeout: 20000 });
-const aufrufe = await ws.evaluate(() => window.__aufrufe);
+// Neue Seite: Foto → erkennen
+await seite.click('[data-tab=neu]');
+await seite.waitForSelector('#ws-foto');
+await seite.setInputFiles('#ws-foto', join(wurzel, 'icon-512.png'));
+await seite.click('#ws-erkennen');
+await seite.waitForSelector('#ws-einheiten .einheit');
+pruefe(await seite.locator('#ws-einheiten .einheit').count() === 3, 'Werkstatt: 3 Einheiten erwartet');
+pruefe(await seite.evaluate(() => window.__aufrufe[0]?.bilder) === 3, 'Werkstatt: Foto sollte in 3 Streifen gehen');
+pruefe((await seite.locator('#ws-unsicher').innerText()).includes('inpellit'), 'Werkstatt: Unsicher-Hinweis fehlt');
+if (bilder) await seite.screenshot({ path: `${bilder}/n1-pruefen.png` });
+
+// Analyse mit einer Nachbesserung
+await seite.click('#ws-analysieren');
+await seite.waitForFunction(() => !document.getElementById('ws-s4').classList.contains('zu'), null, { timeout: 20000 });
+const aufrufe = await seite.evaluate(() => window.__aufrufe);
 pruefe(aufrufe.some(a => a.n === 2 && a.nachbesserung && a.cache === false), 'Werkstatt: Nachbesserung für Einheit 2 fehlt');
-pruefe(aufrufe.filter(a => a.art === 'analyse').length === 4, 'Werkstatt: 3 Analysen + 1 Nachbesserung erwartet (keine Nachbesserung wegen fehlender Stelle)');
-pruefe(JSON.parse(await ws.inputValue('#ausgabe')).saetze[0].ref === '1', 'Werkstatt: Einheit ohne Stelle sollte laufende Nummer bekommen');
-const json = await ws.inputValue('#ausgabe');
-pruefe(json.length > 1000, 'Werkstatt: Ausgabe leer');
-pruefe((await ws.locator('#ergebnis').innerText()).includes('Bereit für die App'), 'Werkstatt: Ergebnis nicht bereit');
-if (bilder) await ws.screenshot({ path: `${bilder}/w2-fertig.png`, fullPage: true });
-await ws.emulateMedia({ colorScheme: 'dark' });
-if (bilder) await ws.screenshot({ path: `${bilder}/w3-dunkel.png` });
+pruefe(aufrufe.filter(a => a.art === 'analyse').length === 4, 'Werkstatt: 3 Analysen + 1 Nachbesserung erwartet');
+pruefe((await seite.locator('#ws-ergebnis').innerText()).includes('3 Sätze'), 'Werkstatt: Ergebnis nicht bereit');
+if (bilder) await seite.screenshot({ path: `${bilder}/n2-fertig.png`, fullPage: true });
 
-// Stand übersteht Neuladen
-await ws.reload();
-await ws.waitForFunction(() => document.getElementById('ausgabe').value.length > 1000);
+// Werkstatt-Stand überlebt Neuladen (Konto) – erst warten, bis der Stand geschrieben ist
+await seite.waitForFunction(() => { const d = JSON.parse(sessionStorage.getItem('fakedb') || '{}'); const w = Object.entries(d).find(([k]) => k.endsWith('/werkstatt')); return !!w && w[1].phase === 4; }, null, { timeout: 5000 })
+  .catch(() => fehler.push('Werkstatt-Stand (Phase 4) wurde nicht ins Konto geschrieben'));
+await seite.reload();
+await geladen();
+pruefe(await seite.locator('#tabs button.an').innerText() === 'Neue Seite', 'Reiter nach Neuladen nicht gemerkt');
+await seite.waitForSelector('#ws-uebernehmen');
+pruefe(!(await seite.locator('#ws-uebernehmen').isDisabled()), 'Werkstatt: Stand nach Neuladen verloren');
 
-// ───────── App: Import
-const app = await kontext.newPage();
-app.on('pageerror', e => fehler.push('App JS: ' + e.message));
-await app.goto(url + '/');
-await app.waitForSelector('#latein .wort');
-await app.click('[data-act=vor]');                         // Fortschritt im eingebauten Text: Satz 2
-await app.click('[data-act=uebersicht]');
-await app.click('[data-act=import]');
-await app.fill('#import-feld', '{"kaputt": true');
-await app.click('[data-act=importieren]');
-pruefe((await app.locator('.blatt .rueck').innerText()).includes('kein vollständiger Text'), 'App: Meldung bei kaputtem JSON fehlt');
-await app.fill('#import-feld', json);
-if (bilder) await app.screenshot({ path: `${bilder}/a1-import.png` });
-await app.click('[data-act=importieren]');
-await app.waitForFunction(() => document.getElementById('schrift').textContent === 'De vita beata' && document.querySelector('.mitte').textContent.includes('von 3'));
-pruefe(await app.locator('.auto').count() === 1, 'App: Hinweis „automatisch erstellt“ fehlt');
-await app.locator('#latein .wort').first().click();           // Gliedern-Schritt: Auswahl funktioniert
-await app.click('[data-act=loesung]');
-pruefe(await app.locator('.lehrer').count() === 1, 'App: Schritt im importierten Text nicht lösbar');
-await app.reload();
-await app.waitForSelector('#latein .wort');
-pruefe((await app.locator('.mitte').innerText()).includes('von 3'), 'App: importierter Text nach Neuladen nicht aktiv');
-await app.click('[data-act=uebersicht]');
-pruefe(await app.locator('.tliste li').count() === 2, 'App: Textliste sollte 2 Texte zeigen');
-if (bilder) await app.screenshot({ path: `${bilder}/a2-texte.png` });
-await app.locator('.tliste [data-act=text]').first().click();
-await app.click('.blatt [data-act=schliessen]');
-pruefe((await app.locator('.mitte').innerText()).includes('Satz 2 von 8'), 'App: Position im eingebauten Text verloren');
-await app.click('[data-act=uebersicht]');
-await app.locator('[data-act=text-weg]').click();
-await app.locator('[data-act=text-weg]').click();
-pruefe(await app.locator('.tliste li').count() === 0, 'App: Text nicht entfernt');
+// Übernehmen → Text aktiv
+await seite.click('#ws-uebernehmen');
+await seite.waitForFunction(() => document.getElementById('schrift').textContent === 'De vita beata' && document.querySelector('.mitte')?.textContent.includes('von 3'));
+pruefe(await seite.locator('.auto').count() === 1, 'App: Hinweis „automatisch erstellt“ fehlt');
+pruefe((await seite.locator('.update').innerText()).includes('Neu in der Bibliothek'), 'App: Meldung nach Übernahme fehlt');
+await seite.locator('#latein .wort').first().click();
+await seite.click('[data-act=loesung]');
+pruefe(await seite.locator('.lehrer').count() === 1, 'App: Schritt im neuen Text nicht lösbar');
+if (bilder) await seite.screenshot({ path: `${bilder}/n3-uebernommen.png` });
+
+// Alles im Konto: Neuladen hält Text, Position und Werkstatt (leer)
+await seite.waitForFunction(() => window.__schreibe.some(p => p.includes('/bibliothek/texte/')), null, { timeout: 5000 }).catch(() => fehler.push('Text wurde nicht ins Konto geschrieben'));
+await seite.reload();
+await geladen();
+pruefe((await seite.locator('.mitte').innerText()).includes('von 3'), 'App: neuer Text nach Neuladen nicht aktiv');
+await seite.click('[data-act=uebersicht]');
+await seite.waitForSelector('.blatt.an');
+pruefe(await seite.locator('.tliste li').count() === 2, 'App: Textliste sollte 2 Texte zeigen');
+if (bilder) await seite.screenshot({ path: `${bilder}/n4-texte.png` });
+await seite.locator('.tliste [data-act=text]').first().click();
+await seite.click('.blatt [data-act=schliessen]');
+pruefe((await seite.locator('.mitte').innerText()).includes('Satz 2 von 8'), 'App: Position im eingebauten Text verloren');
+await seite.click('[data-tab=neu]');
+await seite.waitForSelector('#ws-s1');
+pruefe(await seite.locator('#ws-s2.zu').count() === 1, 'Werkstatt: nach Übernahme nicht zurückgesetzt');
+
+// Text entfernen (zweistufig)
+await seite.click('[data-tab=text]');
+await seite.click('[data-act=uebersicht]');
+await seite.locator('[data-act=text-weg]').click();
+await seite.locator('[data-act=text-weg]').click();
+pruefe(await seite.locator('.tliste li').count() === 0, 'App: Text nicht entfernt');
+pruefe(await seite.evaluate(() => !Object.keys(JSON.parse(sessionStorage.getItem('fakedb'))).some(k => k.includes('/texte/'))), 'App: Textdokument nicht aus dem Konto gelöscht');
+
+// Dunkelmodus
+await seite.emulateMedia({ colorScheme: 'dark' });
+await seite.click('.blatt [data-act=schliessen]');
+await seite.click('[data-tab=neu]');
+if (bilder) await seite.screenshot({ path: `${bilder}/n5-dunkel.png` });
 
 await browser.close(); server.close();
 if (fehler.length) { console.log('FEHLER:\n' + fehler.join('\n')); process.exit(1); }
-console.log('ok: Werkstatt → App ohne Fehler');
+console.log('ok: Artefakt – Werkstatt, Bibliothek und Konto ohne Fehler');

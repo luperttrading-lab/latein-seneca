@@ -1,6 +1,6 @@
 // Service Worker: eigene Dateien „Netz zuerst“, damit Updates ankommen (Skill app-update-iphone).
 const CACHE = 'latein-seneca';
-const ASSETS = ['./', './index.html', './style.css', './app.js', './daten.js', './pruefung.js', './manifest.webmanifest', './icon-192.png', './apple-touch-icon.png'];
+const ASSETS = ['./', './index.html', './style.css', './app.js', './daten.js', './pruefung.js', './werkstatt.js', './manifest.webmanifest', './icon-192.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));

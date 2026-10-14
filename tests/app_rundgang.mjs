@@ -10,7 +10,12 @@ const pw = await import('playwright').catch(() =>
   import(join(execSync('npm root -g').toString().trim(), 'playwright', 'index.js')));
 const chromium = pw.chromium || pw.default.chromium;
 
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
 const wurzel = new URL('..', import.meta.url).pathname;
+const ctxDaten = {};
+vm.runInNewContext(readFileSync(join(wurzel, 'daten.js'), 'utf8') + '\nthis.TEXTE = TEXTE;', ctxDaten);
+const SAETZE_ROH = JSON.parse(JSON.stringify(ctxDaten.TEXTE[0].saetze));
 const bilder = process.argv[2];
 const TYPEN = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
 const server = createServer(async (req, res) => {
@@ -109,6 +114,21 @@ await foto('10-abfrage');
 await seite.reload();
 await seite.click('[data-tab=text]');
 pruefe((await seite.locator('.mitte').innerText()).includes('Satz 8'), 'Stand nach Neuladen verloren');
+
+// Neue Seite (ohne Claude): Verweis auf claude.ai und Einfügen
+await seite.click('[data-tab=neu]');
+pruefe((await seite.locator('#haupt').innerText()).includes('claude.ai'), 'Neue Seite: Verweis auf claude.ai fehlt');
+await seite.fill('#import-feld', '{"kaputt": true');
+await seite.click('[data-act=importieren]');
+pruefe((await seite.locator('#import-meldung').innerText()).includes('keine vollständige Seite'), 'Import: Meldung bei kaputtem JSON fehlt');
+const seite2 = JSON.stringify({ id: 'probe', autor: 'Test', titel: 'Probe', saetze: [JSON.parse(JSON.stringify(SAETZE_ROH[0]))] });
+await seite.fill('#import-feld', seite2);
+await seite.click('[data-act=importieren]');
+await seite.waitForFunction(() => document.getElementById('schrift').textContent === 'Probe');
+pruefe((await seite.locator('.mitte').innerText()).includes('von 1'), 'Import: eingefügte Seite nicht aktiv');
+await seite.reload();
+await seite.waitForSelector('#latein .wort');
+pruefe((await seite.locator('#schrift').innerText()) === 'Probe', 'Import: Seite nach Neuladen verloren (Gerät)');
 
 // Dunkelmodus
 await seite.emulateMedia({ colorScheme: 'dark' });

@@ -1,0 +1,2422 @@
+<title>Seneca übersetzen</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root {
+  --bg: #f6f2ea; --karte: #fffdf8; --text: #1f1c17; --leise: #6b645a; --linie: #e2dacb;
+  --akzent: #8c2f1f; --akzent-text: #fff;
+  --p: #c0392b; --s: #1f5fbf; --o: #2e7d32; --a: #9a5b06; --t: #7044b8; --k: #0b7f78; --v: #7a7368;
+  --sel: #ffe58a; --ok: #cdeccf; --bad: #f8c9c3; --fokus: #1f5fbf;
+  --lehrer: #f1ead9; --tipp: #fff4cc;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17161b; --karte: #212026; --text: #ece7de; --leise: #a39d92; --linie: #35333c;
+    --akzent: #e07a5f; --akzent-text: #1a0d08;
+    --p: #ff7b6b; --s: #7cb2ff; --o: #7bd282; --a: #f0ad4e; --t: #c3a6ff; --k: #4fd1c5; --v: #a39d92;
+    --sel: #6b5a12; --ok: #1f4d27; --bad: #5c231d; --fokus: #7cb2ff;
+    --lehrer: #2b2821; --tipp: #3a3216;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans);
+  font-size: 16px; line-height: 1.5; touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+
+/* Kopf */
+.kopf {
+  position: sticky; top: 0; z-index: 10; background: var(--bg);
+  padding: calc(env(safe-area-inset-top) + 8px) 16px 8px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  border-bottom: 1px solid var(--linie);
+}
+.werk { font-family: var(--serif); font-size: 18px; }
+.autor { font-weight: 700; }
+.schrift { font-style: italic; color: var(--leise); }
+.version {
+  background: none; border: 0; padding: 6px 2px; color: var(--leise); font-size: 13px;
+  text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer;
+}
+
+main {
+  max-width: 680px; margin: 0 auto;
+  padding-block: 12px calc(env(safe-area-inset-bottom) + 96px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.lade { color: var(--leise); text-align: center; padding: 48px 0; }
+
+/* Reiter unten */
+.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex;
+  background: var(--karte); border-top: 1px solid var(--linie);
+  padding: 6px 8px calc(env(safe-area-inset-bottom) + 6px);
+}
+.tabs button {
+  flex: 1; background: none; border: 0; padding: 10px 2px; border-radius: 10px;
+  color: var(--leise); font-weight: 600; font-size: 14px; cursor: pointer; white-space: nowrap;
+}
+.tabs button.an { color: var(--akzent); background: var(--bg); }
+
+/* Satznavigation */
+.navi { display: flex; align-items: center; gap: 8px; margin: 4px 0 10px; }
+.navi .pfeil {
+  width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--linie);
+  background: var(--karte); font-size: 22px; cursor: pointer; flex: none;
+}
+.navi .pfeil:disabled { opacity: .35; cursor: default; }
+.navi .mitte {
+  flex: 1; height: 44px; border-radius: 12px; border: 1px solid var(--linie); background: var(--karte);
+  cursor: pointer; font-size: 15px;
+}
+.navi .mitte small { color: var(--leise); }
+
+.modus { display: flex; background: var(--linie); border-radius: 10px; padding: 3px; margin-bottom: 12px; }
+.modus button {
+  flex: 1; border: 0; background: none; padding: 7px; border-radius: 8px; font-size: 14px;
+  font-weight: 600; color: var(--leise); cursor: pointer;
+}
+.modus button.an { background: var(--karte); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+.thema { color: var(--leise); font-size: 14px; margin: 0 0 8px; }
+.thema b { color: var(--text); font-weight: 600; }
+.kontext { font-family: var(--serif); color: var(--leise); font-size: 16px; font-style: italic; margin-bottom: 4px; }
+
+/* Lateinischer Text */
+.latein {
+  font-family: var(--serif); font-size: 22px; line-height: 2; background: var(--karte);
+  border: 1px solid var(--linie); border-radius: 16px; padding: 10px 12px;
+}
+.wg { white-space: nowrap; }
+.wort {
+  cursor: pointer; border-radius: 6px; padding: 1px 2px; margin: 0 -1px;
+  transition: background-color .15s ease;
+}
+.wort:active { background: var(--linie); }
+.pz { color: var(--leise); }
+.r-P { color: var(--p); font-weight: 600; }
+.r-S { color: var(--s); font-weight: 600; }
+.r-O { color: var(--o); }
+.r-A { color: var(--a); }
+.r-T { color: var(--t); }
+.r-K { color: var(--k); }
+.r-V { color: var(--v); font-style: italic; }
+.wort.e { text-decoration: underline 2px var(--k); text-underline-offset: 5px; }
+.wort.sel { background: var(--sel); }
+.wort.ok { background: var(--ok); }
+.wort.bad { background: var(--bad); }
+.wort.fokus { outline: 2px solid var(--fokus); outline-offset: 1px; }
+
+.legende { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 8px 2px 0; font-size: 13px; }
+.legende span::before { content: "■ "; }
+.legende .l-e::before { content: "__ "; }
+.leg-P { color: var(--p); } .leg-S { color: var(--s); } .leg-O { color: var(--o); } .leg-A { color: var(--a); }
+.leg-T { color: var(--t); } .leg-K { color: var(--k); } .leg-V { color: var(--v); }
+
+/* Satzbild */
+.satzbild { margin-top: 12px; border: 1px solid var(--linie); border-radius: 16px; background: var(--karte); overflow: hidden; }
+.satzbild summary {
+  list-style: none; cursor: pointer; padding: 10px 14px; font-weight: 600; font-size: 15px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.satzbild summary::-webkit-details-marker { display: none; }
+.satzbild summary::after { content: "▾"; color: var(--leise); }
+.satzbild[open] summary::after { content: "▴"; }
+.satzbild .zeilen { padding: 0 10px 10px; }
+.zeile {
+  margin-left: calc(var(--lvl) * 16px); padding: 6px 0 6px 10px; border-left: 3px solid var(--linie);
+}
+.zeile[data-lvl="0"] { border-left-color: var(--akzent); }
+.ztag { font-size: 12px; font-weight: 700; color: var(--leise); text-transform: uppercase; letter-spacing: .02em; }
+.zwoerter { font-family: var(--serif); font-size: 19px; line-height: 1.7; }
+.zinfo { font-size: 13px; color: var(--leise); }
+.gesperrt { padding: 10px 14px; color: var(--leise); font-size: 14px; }
+
+/* Aufgabenkarte */
+.karte {
+  margin-top: 12px; background: var(--karte); border: 1px solid var(--linie); border-radius: 16px; padding: 14px;
+}
+.kkopf { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+.phase {
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
+  padding: 3px 8px; border-radius: 999px; background: var(--linie);
+}
+.ph-gliedern { color: var(--k); } .ph-verb { color: var(--p); } .ph-subjekt { color: var(--s); }
+.ph-ergaenzung { color: var(--o); } .ph-bezug { color: var(--t); } .ph-konstr { color: var(--a); }
+.ph-falle { background: var(--bad); color: var(--text); } .ph-uebersetzen { color: var(--akzent); }
+.ph-selbst { color: var(--text); }
+.zaehler { font-size: 13px; color: var(--leise); }
+.frage { margin: 4px 0 10px; font-size: 16px; }
+
+.antippen { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--leise); margin-bottom: 10px; flex-wrap: wrap; }
+.antippen button {
+  border: 1px solid var(--linie); background: none; border-radius: 999px; padding: 4px 10px; font-size: 13px; cursor: pointer;
+}
+.antippen button.an { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+.optionen { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.option {
+  text-align: left; border: 1.5px solid var(--linie); background: var(--bg); border-radius: 12px;
+  padding: 11px 12px; cursor: pointer; font-size: 15px;
+}
+.option.falsch { border-color: var(--p); opacity: .75; }
+.option.richtig { border-color: var(--o); background: var(--ok); }
+.option:disabled { cursor: default; }
+.warum { display: block; font-size: 13px; color: var(--leise); margin-top: 4px; }
+
+.tipp { background: var(--tipp); border-radius: 10px; padding: 10px 12px; font-size: 15px; margin-bottom: 10px; }
+.rueck { border-left: 4px solid var(--p); padding: 6px 10px; margin-bottom: 10px; font-size: 15px; }
+.rueck b { font-family: var(--serif); }
+.lehrer { background: var(--lehrer); border-left: 4px solid var(--akzent); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; font-size: 15px; }
+.ltitel { font-weight: 700; margin-bottom: 2px; }
+
+.knoepfe { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn {
+  border: 0; background: var(--akzent); color: var(--akzent-text); font-weight: 600; border-radius: 12px;
+  padding: 10px 16px; cursor: pointer; font-size: 15px;
+}
+.btn2 {
+  border: 1.5px solid var(--linie); background: none; border-radius: 12px; padding: 9px 14px; cursor: pointer; font-size: 15px;
+}
+.voll { width: 100%; }
+.rechts { margin-left: auto; }
+
+.punkte { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.punkt {
+  width: 26px; height: 26px; border-radius: 50%; border: 0; background: var(--linie); font-size: 12px;
+  color: var(--leise); cursor: pointer; padding: 0;
+}
+.punkt.ok { background: var(--o); color: #fff; }
+.punkt.fehler { background: var(--a); color: #fff; }
+.punkt.hilfe { background: var(--leise); color: var(--bg); }
+.punkt.akt { outline: 2px solid var(--text); outline-offset: 1px; }
+.punkt:disabled { opacity: .45; cursor: default; }
+
+textarea {
+  width: 100%; min-height: 120px; resize: vertical; border: 1.5px solid var(--linie); border-radius: 12px;
+  padding: 10px 12px; font: 16px/1.5 var(--sans); background: var(--bg); color: var(--text); margin-bottom: 10px;
+}
+textarea:focus { outline: none; border-color: var(--akzent); }
+.loesung { border: 1px solid var(--linie); border-radius: 12px; padding: 10px 12px; margin: 10px 0; font-size: 15px; }
+.kontrolle { margin: 10px 0; font-size: 15px; }
+.kontrolle summary { cursor: pointer; font-weight: 600; }
+.kontrolle ul { margin: 6px 0 0; padding-left: 20px; }
+.merke { background: var(--lehrer); border-radius: 12px; padding: 10px 12px; margin: 10px 0; }
+.merke ul { margin: 4px 0 0; padding-left: 20px; }
+.bilanz { font-size: 14px; color: var(--leise); margin: 8px 0; }
+
+/* Checkliste (selbstständig) */
+.haken { list-style: none; padding: 0; margin: 0 0 12px; }
+.haken li { border-bottom: 1px solid var(--linie); }
+.haken label { display: flex; gap: 10px; padding: 9px 0; cursor: pointer; }
+.haken input { width: 20px; height: 20px; margin-top: 2px; flex: none; accent-color: var(--akzent); }
+.haken small { display: block; color: var(--leise); }
+
+/* Blatt (Wortkarte, Übersicht) */
+.schleier { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 20; opacity: 0; transition: opacity .25s; }
+.schleier.an { opacity: 1; }
+.blatt {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 21; max-height: 82vh; overflow: auto;
+  background: var(--karte); border-radius: 20px 20px 0 0; padding: 8px 18px calc(env(safe-area-inset-bottom) + 18px);
+  transform: translateY(100%); transition: transform .28s ease; max-width: 680px; margin: 0 auto;
+  box-shadow: 0 -8px 30px rgba(0,0,0,.25);
+}
+.blatt.an { transform: translateY(0); }
+.griff { width: 40px; height: 5px; border-radius: 3px; background: var(--linie); margin: 4px auto 10px; }
+.wkopf { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.wform { font-family: var(--serif); font-size: 30px; font-weight: 600; }
+.stern { border: 1.5px solid var(--linie); background: none; border-radius: 999px; padding: 6px 12px; font-size: 14px; cursor: pointer; }
+.stern.an { border-color: var(--akzent); color: var(--akzent); }
+.wfeld { margin: 10px 0; }
+.wlabel { font-size: 12px; font-weight: 700; color: var(--leise); text-transform: uppercase; letter-spacing: .03em; }
+.wlemma { font-family: var(--serif); font-size: 19px; }
+.wrolle { display: inline-block; font-size: 13px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--linie); }
+
+.uliste { list-style: none; padding: 0; margin: 0; }
+.uliste button {
+  width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--linie);
+  padding: 10px 2px; cursor: pointer; display: flex; gap: 10px; align-items: baseline;
+}
+.uliste .nr { font-weight: 700; width: 22px; flex: none; }
+.uliste .anf { font-family: var(--serif); flex: 1; }
+.uliste .st { flex: none; color: var(--o); font-weight: 700; }
+.uliste .hier { color: var(--akzent); }
+.gesamt { font-size: 15px; white-space: pre-wrap; }
+
+.auto { font-size: 13px; color: var(--leise); border-left: 3px solid var(--a); padding: 2px 0 2px 8px; margin: 0 0 8px; }
+
+/* Texte und Import */
+.tliste { list-style: none; padding: 0; margin: 0 0 6px; }
+.tliste li { display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--linie); }
+.tliste li.hier .ttitel { color: var(--akzent); }
+.twahl {
+  flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 10px 2px; cursor: pointer;
+  display: grid; grid-template-columns: 1fr auto; gap: 0 10px;
+}
+.ttitel { font-family: var(--serif); font-size: 18px; font-weight: 600; }
+.tunter { grid-column: 1; font-size: 13px; color: var(--leise); }
+.tstand { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-size: 14px; color: var(--leise); font-variant-numeric: tabular-nums; }
+.vweg.warnen { color: var(--p); font-size: 14px; font-weight: 600; }
+.anleitung { padding-left: 20px; margin: 6px 0 12px; }
+.anleitung a { color: var(--akzent); }
+.datei { display: inline-block; cursor: pointer; }
+.datei input { display: block; margin-top: 6px; font-size: 13px; max-width: 100%; }
+
+/* Methode & Vokabeln */
+h2 { font-family: var(--serif); font-size: 24px; margin: 8px 0 6px; }
+h3 { font-size: 17px; margin: 18px 0 6px; }
+.leise { color: var(--leise); }
+.schrittliste { counter-reset: s; list-style: none; padding: 0; margin: 0; }
+.schrittliste li { background: var(--karte); border: 1px solid var(--linie); border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; }
+.schrittliste b { display: block; }
+.schrittliste .pf { font-size: 14px; color: var(--leise); }
+.tabelle { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--karte); border-radius: 12px; overflow: hidden; }
+.tabelle th, .tabelle td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--linie); vertical-align: top; }
+.tabelle th { font-size: 12px; text-transform: uppercase; color: var(--leise); }
+.tabelle td:first-child { font-family: var(--serif); font-style: italic; }
+.fallen li { margin-bottom: 4px; }
+.hinweis { font-size: 13px; color: var(--leise); margin-top: 24px; }
+
+.vzeile { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--linie); }
+.vzeile .vtext { flex: 1; }
+.vzeile .vlemma { font-family: var(--serif); font-size: 18px; }
+.vzeile .vmeta { font-size: 13px; color: var(--leise); }
+.vweg { border: 0; background: none; color: var(--leise); font-size: 18px; padding: 4px 8px; cursor: pointer; }
+.sitzt { color: var(--o); font-size: 13px; font-weight: 700; }
+.abfrage { text-align: center; }
+.afrage { font-family: var(--serif); font-size: 30px; margin: 10px 0 4px; }
+.aform { color: var(--leise); font-size: 14px; margin-bottom: 14px; }
+.aantwort { margin: 10px 0 14px; }
+.aantwort .wlemma { margin-bottom: 4px; }
+.abfrage .knoepfe { justify-content: center; }
+
+/* Update-Banner (siehe Skill app-update-iphone) */
+.update {
+  position: fixed; left: 12px; right: 12px; top: max(env(safe-area-inset-top), 12px); z-index: 30;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: #34c759; color: #06240e;
+  padding: 12px 14px; border-radius: 14px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  opacity: 0; transition: opacity .35s ease; pointer-events: none;
+}
+.update.an { opacity: 1; pointer-events: auto; }
+.update[hidden] { display: none; }
+.update.info { background: #2d2d33; color: #f2f2f7; font-weight: 500; }
+.update.unten { top: auto; bottom: max(env(safe-area-inset-bottom), 12px); }
+.update .btn { width: auto; padding: 8px 14px; font-size: 15px; background: #06240e; color: #fff; }
+
+/* Neue Seite (Werkstatt) */
+.ws { display: flex; flex-direction: column; gap: 12px; }
+.ws h2 { margin-bottom: 0; }
+.ws h3 { font-family: var(--serif); font-size: 20px; margin: 0; display: flex; align-items: baseline; gap: 10px; }
+.ws .nr { font-family: var(--sans); font-size: 13px; font-weight: 700; color: var(--akzent); border: 1.5px solid currentColor; border-radius: 999px; width: 24px; height: 24px; display: inline-grid; place-items: center; flex: none; }
+.ws p { margin: 0; }
+.ws .schritt { background: var(--karte); border: 1px solid var(--linie); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ws .schritt.zu { opacity: .55; }
+.ws .schritt.zu .nur-offen { display: none; }
+.ws .knoepfe { align-items: center; }
+.ws .vorschau { display: flex; flex-wrap: wrap; gap: 8px; }
+.ws .vorschau img { height: 96px; width: auto; border-radius: 8px; border: 1px solid var(--linie); }
+.ws textarea { min-height: 0; margin: 0; }
+.ws textarea.latein { font-family: var(--serif); font-size: 18px; line-height: 1.5; padding: 8px 10px; }
+.ws input[type=text] { width: 100%; border: 1.5px solid var(--linie); border-radius: 10px; padding: 8px 10px; font: 16px var(--sans); background: var(--bg); color: var(--text); }
+.ws .felder { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.ws .felder label { font-size: 12px; font-weight: 700; color: var(--leise); text-transform: uppercase; letter-spacing: .03em; display: flex; flex-direction: column; gap: 4px; }
+.ws .einheiten { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.ws .einheit { border-top: 1px solid var(--linie); padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.ws .ekopf { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--leise); }
+.ws .ekopf input { width: 72px; padding: 4px 6px; font-size: 14px; }
+.ws .ekopf .weg { margin-left: auto; border: 0; background: none; color: var(--leise); cursor: pointer; font-size: 14px; padding: 4px 6px; }
+.ws .unsicher { font-size: 14px; color: var(--a); }
+.ws .liste { list-style: none; padding: 0; margin: 0; }
+.ws .liste li { display: grid; grid-template-columns: 34px 1fr auto; gap: 4px 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--linie); }
+.ws .snr { font-weight: 700; font-variant-numeric: tabular-nums; }
+.ws .sanf { font-family: var(--serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.ws .sstat { font-size: 13px; font-weight: 600; white-space: nowrap; }
+.ws .smeld { grid-column: 2 / span 2; font-size: 13px; color: var(--p); }
+.ws .s-fertig { color: var(--o); } .ws .s-laeuft { color: var(--a); } .ws .s-fehler { color: var(--p); } .ws .s-offen { color: var(--leise); }
+.ws .ergebnis { border-radius: 10px; padding: 10px 12px; font-size: 15px; }
+.ws .ergebnis.gut { background: var(--ok); } .ws .ergebnis.schlecht { background: var(--bad); }
+.ws .datei { display: inline-block; }
+.nurpages { margin-top: 12px; }
+.nurpages a { color: var(--akzent); }
+
+.kopf { top: env(safe-area-inset-top, 0px); padding-top: 8px; }
+.tabs { padding-bottom: 6px; }
+main { padding-bottom: 96px; }
+</style>
+<script>const APP_VERSION = '2.0';</script>
+<header class="kopf">
+  <div class="werk"><span class="autor" id="autor">Seneca</span> <span class="schrift" id="schrift">De vita beata</span></div>
+  <button class="version" id="version" type="button" aria-label="Nach Update suchen"></button>
+</header>
+
+<main id="haupt"></main>
+
+<nav class="tabs" id="tabs">
+  <button type="button" data-tab="text">Übersetzen</button>
+  <button type="button" data-tab="neu">Neue Seite</button>
+  <button type="button" data-tab="methode">Methode</button>
+  <button type="button" data-tab="vokabeln">Vokabeln</button>
+</nav>
+
+<div class="schleier" id="schleier" hidden></div>
+<section class="blatt" id="blatt" hidden aria-modal="true" role="dialog"></section>
+
+<div class="update" id="update" hidden>
+  <span id="update-text"></span>
+  <button class="btn" id="update-go" type="button">Jetzt laden</button>
+</div>
+<script>
+'use strict';
+// Formale Prüfung von Satzdaten. Eine Quelle für App (Import), Werkstatt und Tests.
+// Findet Strukturfehler (fehlende Felder, Verweise ins Leere, falsche Typen) –
+// keine inhaltlichen Fehler in der Analyse.
+(function (wurzel) {
+  const PHASEN = ['gliedern', 'verb', 'subjekt', 'ergaenzung', 'bezug', 'konstr', 'falle', 'uebersetzen'];
+  const TYPEN = ['tippen', 'bezug', 'wahl', 'text'];
+  const ROLLE = /^[PSOATKV]\*?$/;
+  const WORTFELDER = ['t', 'l', 'b', 'f', 'fn', 'r', 'c'];
+  const istText = x => typeof x === 'string' && x.trim() !== '';
+
+  // 'wort' = erstes Vorkommen, 'wort#2' = zweites
+  function finde(s, ref) {
+    if (typeof ref !== 'string') return -1;
+    const [form, nr] = ref.split('#');
+    let n = Number(nr || 1);
+    for (let i = 0; i < s.w.length; i++) if (s.w[i].t === form && --n === 0) return i;
+    return -1;
+  }
+
+  const istEinleitewort = wd => typeof wd.r === 'string' && (wd.r.endsWith('*') || /leitet .* ein/.test(wd.fn || ''));
+
+  function pruefeSatz(s, ort = s && s.id || 'Satz') {
+    const fehler = [];
+    const f = t => fehler.push(`${ort}: ${t}`);
+    if (!s || typeof s !== 'object') { f('kein Objekt'); return fehler; }
+    for (const feld of ['id', 'ref', 'thema', 'woertlich', 'gut']) if (!istText(s[feld])) f(`${feld} fehlt`);
+    if (!Array.isArray(s.merke) || !s.merke.length || !s.merke.every(istText)) f('merke fehlt');
+    if (!Array.isArray(s.w) || !s.w.length) { f('Wortliste w fehlt'); return fehler; }
+    if (!s.teile || typeof s.teile !== 'object') { f('teile fehlt'); return fehler; }
+
+    s.w.forEach((wd, i) => {
+      if (!wd || typeof wd !== 'object') return f(`Token ${i + 1} ist kein Objekt`);
+      if ('p' in wd) { if (!istText(wd.p)) f(`Satzzeichen ${i + 1} leer`); return; }
+      for (const feld of WORTFELDER) {
+        if (feld === 'c' ? !(Number.isInteger(wd.c) || /^\d+$/.test(wd.c)) : !istText(wd[feld])) f(`${wd.t || 'Wort ' + (i + 1)}: Feld ${feld} fehlt`);
+      }
+      if (istText(wd.r) && !ROLLE.test(wd.r)) f(`${wd.t}: Rolle ${wd.r} unbekannt`);
+      if (wd.c !== undefined && !s.teile[wd.c]) f(`${wd.t}: Teilsatz ${wd.c} nicht in teile`);
+    });
+    const benutzt = new Set(s.w.filter(x => x && !('p' in x)).map(x => String(x.c)));
+    for (const [id, t] of Object.entries(s.teile)) {
+      if (!benutzt.has(id)) f(`Teilsatz ${id} ohne Wörter`);
+      if (!t || !Number.isInteger(t.lvl) || t.lvl < 0 || !istText(t.name)) f(`Teilsatz ${id}: lvl oder name fehlt`);
+    }
+
+    if (!Array.isArray(s.schritte) || !s.schritte.length) { f('schritte fehlen'); return fehler; }
+    s.schritte.forEach((st, k) => {
+      const o = `Schritt ${k + 1}`;
+      if (!st || typeof st !== 'object') return f(`${o} ist kein Objekt`);
+      if (!PHASEN.includes(st.ph)) f(`${o}: Phase ${st.ph} unbekannt`);
+      if (!TYPEN.includes(st.typ)) f(`${o}: Typ ${st.typ} unbekannt`);
+      if (!istText(st.frage)) f(`${o}: frage fehlt`);
+      for (const liste of ['ziel', 'auch']) {
+        if (st[liste] !== undefined && !(Array.isArray(st[liste]) && st[liste].every(istText))) f(`${o}: ${liste} ist keine Liste von Wörtern`);
+      }
+      if (st.falsch !== undefined && (typeof st.falsch !== 'object' || Array.isArray(st.falsch) || !Object.values(st.falsch).every(istText))) f(`${o}: falsch ungültig`);
+      const refs = [...(st.ziel || []), ...(st.auch || []), ...Object.keys(st.falsch || {})];
+      if (st.fokus !== undefined) refs.push(st.fokus);
+      for (const r of refs) if (finde(s, r) < 0) f(`${o}: Verweis „${r}“ nicht im Satz`);
+      if (st.typ === 'tippen' || st.typ === 'bezug') {
+        if (!st.ziel || !st.ziel.length) f(`${o}: ziel fehlt`);
+        if (!istText(st.erk)) f(`${o}: erk fehlt`);
+        for (const r of st.ziel || []) {
+          if ((st.auch || []).includes(r)) f(`${o}: ${r} steht in ziel und auch`);
+          if (st.falsch && r in st.falsch) f(`${o}: ${r} steht in ziel und falsch`);
+        }
+      }
+      if (st.typ === 'bezug' && !istText(st.fokus)) f(`${o}: fokus fehlt`);
+      if (st.ph === 'gliedern' && st.typ === 'tippen') {
+        for (const r of st.ziel || []) {
+          const i = finde(s, r);
+          if (i >= 0 && !istEinleitewort(s.w[i])) f(`${o}: ${r} ist Ziel beim Gliedern, aber nicht als Einleitewort markiert (r mit * oder fn „leitet … ein“)`);
+        }
+      }
+      if (st.typ === 'wahl') {
+        if (!Array.isArray(st.opts) || st.opts.length < 2 || !st.opts.every(istText)) f(`${o}: opts fehlen`);
+        else {
+          if (!(Number.isInteger(st.ok) && st.ok >= 0 && st.ok < st.opts.length)) f(`${o}: ok außerhalb der Optionen`);
+          if (st.warum !== undefined) {
+            if (!Array.isArray(st.warum) || st.warum.length !== st.opts.length) f(`${o}: warum muss so lang sein wie opts`);
+            else if (st.warum[st.ok] !== null) f(`${o}: warum an der richtigen Stelle muss null sein`);
+          }
+        }
+        if (!istText(st.erk)) f(`${o}: erk fehlt`);
+      }
+    });
+    if (s.schritte[s.schritte.length - 1]?.typ !== 'text') f('letzter Schritt ist nicht die Übersetzung (typ text)');
+    return fehler;
+  }
+
+  function pruefeText(text) {
+    const fehler = [];
+    if (!text || typeof text !== 'object') return ['Kein Text-Objekt.'];
+    if (!istText(text.id)) fehler.push('id fehlt');
+    if (!istText(text.titel)) fehler.push('titel fehlt');
+    if (!Array.isArray(text.saetze) || !text.saetze.length) return [...fehler, 'saetze fehlen'];
+    const ids = new Set();
+    text.saetze.forEach((s, i) => {
+      fehler.push(...pruefeSatz(s, `Satz ${i + 1}`));
+      if (s && ids.has(s.id)) fehler.push(`Satz ${i + 1}: id ${s.id} doppelt`);
+      if (s) ids.add(s.id);
+    });
+    return fehler;
+  }
+
+  wurzel.Pruefung = { finde, istEinleitewort, pruefeSatz, pruefeText };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+'use strict';
+// Satzdaten der Übersetzungshilfe – Seneca, De vita beata 1,1–2.
+//
+// Wort:   w(Form, Lemma, Bedeutung, Bestimmung, Funktion im Satz, Rolle, Teilsatz)
+// Zeichen: z(',')
+// Rolle:  P Prädikat · S Subjekt · O Objekt/Ergänzung · A Adverbiale · T Attribut
+//         K Konnektor/Einleitewort · V Anrede. Ein * dahinter markiert ein Einleitewort
+//         (Frage-/Relativwort), das zugleich Satzglied ist.
+// Teilsätze: id → { lvl (Einrücktiefe), name, info }
+// Verweise in Schritten: 'wort' = erstes Vorkommen im Satz, 'wort#2' = zweites.
+// Schritt-Phasen: gliedern · verb · subjekt · ergaenzung · bezug · konstr · falle · uebersetzen
+// Schritt-Typen:  tippen (mehrere Wörter) · bezug (ein Wort zu fokus) · wahl · text
+
+const w = (t, l, b, f, fn, r, c) => ({ t, l, b, f, fn, r, c });
+const z = p => ({ p });
+
+const TEXTE = [{
+  id: 'dvb-1',
+  autor: 'Seneca',
+  titel: 'De vita beata',
+  untertitel: 'Kapitel 1, Abschnitt 1–2',
+  saetze: [
+
+  // ───────────────────────────── Satz 1
+  {
+    id: 's1', ref: '1,1',
+    thema: 'Der Anfang der Schrift. Seneca spricht seinen Bruder Gallio an und nennt das Thema.',
+    w: [
+      w('Vivere', 'vivere, vivo, vixi, victurum', 'leben', 'Inf. Präs. Akt.', 'Ergänzung zu volunt: „leben wollen“ – betont an den Anfang gestellt', 'O', 1),
+      z(','),
+      w('Gallio', 'Gallio, Gallionis m.', 'Gallio – Senecas älterer Bruder Novatus, der durch Adoption den Namen L. Iunius Gallio trug', 'Vok. Sg.', 'Anrede', 'V', 1),
+      w('frater', 'frater, fratris m.', 'Bruder', 'Vok. Sg.', 'Anrede, Apposition zu Gallio', 'V', 1),
+      z(','),
+      w('omnes', 'omnis, omne', 'jeder, ganz; im Plural: alle', 'Nom. Pl. m.', 'Subjekt zu volunt (und caligant): „alle (Menschen)“', 'S', 1),
+      w('beate', 'beate (Adverb zu beatus)', 'glücklich', 'Adverb', 'Adverbiale zu Vivere – weit davon getrennt!', 'A', 1),
+      w('volunt', 'velle, volo, volui', 'wollen', '3. Pl. Ind. Präs. Akt.', 'Prädikat von Hauptsatz 1', 'P', 1),
+      z(','),
+      w('sed', 'sed', 'aber, sondern', 'Konjunktion (beiordnend)', 'verbindet Hauptsatz 1 und 2', 'K', 2),
+      w('ad', 'ad (Präp. + Akk.)', 'zu, an, bei; mit nd-Form: zum, um zu', 'Präposition + Akk.', 'gehört zu pervidendum', 'A', 2),
+      w('pervidendum', 'pervidere, pervideo, pervidi, pervisum', 'genau durchschauen, klar erkennen', 'Gerundium, Akk. (nach ad)', 'Adverbiale: „zum Durchschauen“ – „wenn es darum geht, zu durchschauen“', 'A', 2),
+      w('quid', 'quis, quid (Fragepronomen)', 'wer? was?', 'Nom. Sg. n.', 'leitet die indirekte Frage ein: „was (es) ist“', 'K', 3),
+      w('sit', 'esse, sum, fui', 'sein', '3. Sg. Konj. Präs.', 'Prädikat der indirekten Frage – Konjunktiv wegen der indirekten Frage', 'P', 3),
+      w('quod', 'qui, quae, quod (Relativpronomen)', 'der, die, das; welcher', 'Nom. Sg. n.', 'leitet den Relativsatz ein; Subjekt: „das, was …“', 'S*', 4),
+      w('beatam', 'beatus, beata, beatum', 'glücklich', 'Akk. Sg. f.', 'Attribut zu vitam (KNG)', 'T', 4),
+      w('vitam', 'vita, vitae f.', 'Leben', 'Akk. Sg.', 'Objekt zu efficiat', 'O', 4),
+      w('efficiat', 'efficere, efficio, effeci, effectum', 'bewirken, hervorbringen, machen', '3. Sg. Konj. Präs. Akt.', 'Prädikat des Relativsatzes – Konjunktiv, weil der Relativsatz in der indirekten Frage steckt (Modusangleichung)', 'P', 4),
+      w('caligant', 'caligare, caligo, caligavi', 'im Dunkeln tappen, nicht klar sehen (vgl. caligo: Nebel, Finsternis)', '3. Pl. Ind. Präs. Akt.', 'Prädikat von Hauptsatz 2 – Subjekt weiterhin omnes', 'P', 2),
+      z(';'),
+    ],
+    teile: {
+      1: { lvl: 0, name: 'HS 1', info: 'Hauptsatz' },
+      2: { lvl: 0, name: 'HS 2', info: 'Hauptsatz, mit sed angeschlossen' },
+      3: { lvl: 1, name: 'GS 1° · indirekte Frage', info: 'abhängig von pervidendum: „was es ist“' },
+      4: { lvl: 2, name: 'GS 2° · Relativsatz', info: '„das, was … bewirkt“' },
+    },
+    schritte: [
+      { ph: 'gliedern', typ: 'tippen',
+        frage: 'Lies den Satz einmal ganz durch. Die Satzzeichen geben die grobe Gliederung. Tippe jetzt alle Wörter an, die einen Gliedsatz einleiten (Subjunktion, Frage- oder Relativwort).',
+        ziel: ['quid', 'quod'],
+        tipp: 'Achte auf Wörter mit qu-: Fragewörter und Relativpronomen leiten Gliedsätze ein. Es sind zwei.',
+        falsch: { sed: 'sed verbindet zwei Hauptsätze (beiordnend) – es leitet keinen Gliedsatz ein.', ad: 'ad ist eine Präposition: ad pervidendum ist ein Satzglied, kein Gliedsatz.' },
+        erk: 'quid leitet eine indirekte Frage ein, quod einen Relativsatz. Dazu kommen zwei Hauptsätze, getrennt durch sed. Das Satzbild unter dieser Karte zeigt, wie die vier Teile ineinanderstecken.' },
+      { ph: 'verb', typ: 'tippen',
+        frage: 'Tippe alle Prädikate an – also alle finiten Verbformen (Formen mit Personalendung).',
+        ziel: ['volunt', 'sit', 'efficiat', 'caligant'],
+        tipp: 'Personalendungen: -o/-m, -s, -t, -mus, -tis, -nt. Vier Teilsätze → vier Prädikate.',
+        falsch: { Vivere: 'Infinitiv – keine Personalendung, also kein Prädikat. Er ergänzt volunt: „leben wollen“.', pervidendum: 'nd-Form (Gerundium) – keine Personalendung.' },
+        erk: 'Vier Teilsätze, vier Prädikate – die Rechnung geht auf. Diese Kontrolle machst du bei jedem Satz: Zahl der Teilsätze = Zahl der Prädikate (Ausnahme: Ellipsen).' },
+      { ph: 'verb', typ: 'wahl',
+        frage: 'sit und efficiat stehen im Konjunktiv. Warum steht sit im Konjunktiv?',
+        opts: ['Wunsch: „es möge sein“', 'Indirekte Frage: abhängige Fragen stehen im Konjunktiv', 'Aufforderung: „es soll sein“'], ok: 1,
+        warum: ['Ein Wunsch stünde im Hauptsatz. sit steht aber in einem Gliedsatz, der mit quid beginnt.', null, 'Eine Aufforderung stünde im Hauptsatz. sit hängt von quid ab.'],
+        erk: 'Indirekte Fragen stehen im Lateinischen im Konjunktiv – im Deutschen übersetzt du mit Indikativ: „was es ist“. efficiat steht im Konjunktiv, weil sein Relativsatz in der indirekten Frage steckt (Modusangleichung). Auch hier: deutsch Indikativ.' },
+      { ph: 'subjekt', typ: 'tippen',
+        frage: 'Wer will glücklich leben? Tippe das Subjekt zu volunt an.',
+        ziel: ['omnes'],
+        tipp: 'Gesucht ist ein Nominativ Plural – volunt ist 3. Person Plural.',
+        falsch: { Gallio: 'Gallio frater steht zwischen zwei Kommas – eine Anrede (Vokativ), kein Subjekt.', frater: 'frater gehört zur Anrede: „Bruder Gallio“ (Vokativ).' },
+        erk: 'omnes (Nom. Pl.) passt im Numerus zu volunt (3. Pl.). Falle: Gallio frater sieht wie ein Nominativ aus, ist aber die Anrede an Senecas Bruder – darum die Kommas. omnes ist auch das Subjekt von caligant.' },
+      { ph: 'ergaenzung', typ: 'tippen',
+        frage: 'Was wollen alle? Tippe die Ergänzung zu volunt an.',
+        ziel: ['Vivere'],
+        tipp: 'velle verlangt oft einen Infinitiv: „… wollen“.',
+        erk: 'Vivere ist die Infinitiv-Ergänzung zu volunt: „leben wollen“. Es steht ganz vorn – betont. Das ist Senecas Thema.' },
+      { ph: 'bezug', typ: 'bezug', fokus: 'beate',
+        frage: 'Zu welchem Wort gehört das Adverb beate („glücklich“)? Tippe es an.',
+        ziel: ['Vivere'],
+        tipp: 'Ein Adverb bestimmt ein Verb näher. Was ergibt Sinn: „glücklich wollen“ oder „glücklich leben“?',
+        falsch: { volunt: 'Grammatisch möglich – aber „glücklich wollen“? Seneca geht es um das glückliche Leben.' },
+        erk: 'beate gehört zu Vivere, nicht zu volunt – obwohl es direkt neben volunt steht. Getrenntes Zusammengehöriges (Hyperbaton) ist bei Seneca häufig: Frag immer, wozu ein Wort inhaltlich passt.' },
+      { ph: 'konstr', typ: 'wahl',
+        frage: 'ad pervidendum – was bedeutet ad + nd-Form?',
+        opts: ['„zum Durchschauen“ / „wenn es darum geht, zu durchschauen“', '„durchschaut werdend“', '„was durchschaut werden muss“'], ok: 0,
+        warum: [null, 'Das wäre ein Partizip. pervidendum nach ad ist ein Gerundium – ein substantivierter Infinitiv.', 'Das wäre Gerundivum + esse – hier fehlt esse, und ad steht davor.'],
+        erk: 'ad + Gerundium im Akkusativ = Zweck oder Hinsicht: „zum Durchschauen“. Die indirekte Frage quid sit … ist das Objekt dazu. In gutem Deutsch: „wenn es darum geht, klar zu erkennen, was …“.' },
+      { ph: 'uebersetzen', typ: 'text',
+        frage: 'Übersetze jetzt. Geh vom Satzbild aus: erst die Hauptsätze, dann hängst du die Gliedsätze an. Erst wörtlich, dann gutes Deutsch.' },
+    ],
+    merke: [
+      'Komma-Paar um einen Namen → Anrede (Vokativ), nicht Subjekt.',
+      'qu-Wort + Konjunktiv, abhängig von einem Verb des Sehens/Wissens → indirekte Frage; deutsch Indikativ.',
+      'Ein Adverb sucht sein Verb – auch wenn es weit weg steht.',
+    ],
+    woertlich: 'Leben, Bruder Gallio, wollen alle glücklich, aber für das genaue Durchschauen, was es ist, das ein glückliches Leben bewirkt, tappen sie im Dunkeln;',
+    gut: 'Glücklich leben wollen alle, mein Bruder Gallio; doch wenn es darum geht, klar zu erkennen, was ein Leben glücklich macht, tappen sie im Dunkeln.',
+  },
+
+  // ───────────────────────────── Satz 2
+  {
+    id: 's2', ref: '1,1',
+    thema: 'Seneca erklärt, warum das Ziel so schwer zu erreichen ist.',
+    w: [
+      w('adeoque', 'adeo + -que', 'adeo: so sehr, so; -que: und', 'Adverb + angehängtes -que', 'kündigt den ut-Satz an: adeo … ut = „so sehr …, dass“', 'A', 1),
+      w('non', 'non', 'nicht', 'Negation', 'verneint facile', 'A', 1),
+      w('est', 'esse, sum, fui', 'sein', '3. Sg. Ind. Präs.', 'Prädikat (mit facile): „ist leicht“', 'P', 1),
+      w('facile', 'facilis, facile', 'leicht', 'Nom. Sg. n.', 'Prädikatsnomen zu est – hier nicht das Adverb!', 'P', 1),
+      w('consequi', 'consequi, consequor, consecutus sum (Deponens)', 'erreichen, erlangen', 'Inf. Präs. (Deponens)', 'Subjekt: „(das) Erreichen ist nicht leicht“', 'S', 1),
+      w('beatam', 'beatus, beata, beatum', 'glücklich', 'Akk. Sg. f.', 'Attribut zu vitam', 'T', 1),
+      w('vitam', 'vita, vitae f.', 'Leben', 'Akk. Sg.', 'Objekt zu consequi', 'O', 1),
+      w('ut', 'ut', 'mit Konj.: dass, damit; mit Ind.: wie, sobald', 'Subjunktion', 'leitet den Konsekutivsatz ein (angekündigt durch adeo)', 'K', 2),
+      w('eo', 'is, ea, id', 'er, sie, es; dieser', 'Abl. Sg. n. (Ablativ des Maßes)', 'eo … quo + Komparativ: „um so … je“', 'A', 2),
+      w('quisque', 'quisque, quaeque, quidque', 'jeder (einzelne)', 'Nom. Sg. m.', 'Subjekt zu recedat', 'S', 2),
+      w('ab', 'a/ab (Präp. + Abl.)', 'von, von … her', 'Präposition + Abl.', 'ab ea: „von ihm“ (dem glücklichen Leben)', 'A', 2),
+      w('ea', 'is, ea, id', 'er, sie, es', 'Abl. Sg. f.', 'bezieht sich auf beatam vitam', 'A', 2),
+      w('longius', 'longe (Komparativ: longius)', 'weit; Komparativ: weiter', 'Adverb im Komparativ', 'Adverbiale zu recedat', 'A', 2),
+      w('recedat', 'recedere, recedo, recessi, recessum', 'zurückweichen, sich entfernen', '3. Sg. Konj. Präs. Akt.', 'Prädikat des ut-Satzes – Konjunktiv wegen konsekutivem ut', 'P', 2),
+      w('quo', 'qui, quae, quod', 'um wie viel; mit Komparativ: je', 'Abl. Sg. n. (Ablativ des Maßes)', 'leitet den Vergleichssatz ein – Gegenstück zu eo', 'A*', 3),
+      w('ad', 'ad (Präp. + Akk.)', 'zu, auf … zu', 'Präposition + Akk.', 'ad illam: „auf es zu“', 'A', 3),
+      w('illam', 'ille, illa, illud', 'jener, jene, jenes', 'Akk. Sg. f.', 'bezieht sich auf beatam vitam', 'A', 3),
+      w('concitatius', 'concitate (Adverb zu concitatus)', 'heftig, hastig; Komparativ: heftiger', 'Adverb im Komparativ', 'Adverbiale zu fertur', 'A', 3),
+      w('fertur', 'ferre, fero, tuli, latum', 'tragen, bringen; Passiv: sich bewegen, eilen, stürmen', '3. Sg. Ind. Präs. Pass.', 'Prädikat; mediales Passiv: „eilt, stürmt“', 'P', 3),
+      z(','),
+      w('si', 'si', 'wenn, falls', 'Subjunktion', 'leitet den Bedingungssatz ein', 'K', 4),
+      w('via', 'via, viae f.', 'Weg, Straße', 'Abl. Sg. (Ablativ der Trennung)', '„vom Weg“ – nicht Subjekt!', 'A', 4),
+      w('lapsus', 'labi, labor, lapsus sum (Deponens)', 'gleiten, ausgleiten, abkommen', 'Part. Perf. Nom. Sg. m. (Teil von lapsus est)', 'Prädikat (mit est): „ist abgekommen“', 'P', 4),
+      w('est', 'esse, sum, fui', 'sein', '3. Sg. Ind. Präs. – bildet mit lapsus das Perfekt', 'Prädikat: lapsus est = 3. Sg. Ind. Perf. (Deponens)', 'P', 4),
+      z(';'),
+    ],
+    teile: {
+      1: { lvl: 0, name: 'HS', info: 'Hauptsatz' },
+      2: { lvl: 1, name: 'GS 1° · Konsekutivsatz', info: 'ut + Konj., angekündigt durch adeo: „so …, dass“' },
+      3: { lvl: 2, name: 'GS 2° · Vergleichssatz', info: 'quo … (eo) + Komparativ: „je … um so“' },
+      4: { lvl: 2, name: 'GS 2° · Bedingungssatz', info: 'si: „wenn“ – gehört zum ut-Satz' },
+    },
+    schritte: [
+      { ph: 'gliedern', typ: 'tippen',
+        frage: 'Tippe alle Wörter an, die einen Gliedsatz einleiten.',
+        ziel: ['ut', 'quo', 'si'],
+        tipp: 'Es sind drei. Eines davon hat einen „Partner“ weiter vorn im Satz.',
+        falsch: { adeoque: 'adeo leitet nichts ein, es kündigt an: adeo … ut = „so sehr …, dass“. Merk dir das Wort als Signal!', eo: 'eo ist das Gegenstück zu quo (eo … quo = um so … je), steht aber im ut-Satz und leitet nichts ein.' },
+        erk: 'ut leitet einen Konsekutivsatz ein (angekündigt durch adeo), quo einen Vergleichssatz (Partner: eo), si einen Bedingungssatz. Siehe Satzbild.' },
+      { ph: 'verb', typ: 'tippen',
+        frage: 'Tippe alle Prädikate (finiten Verbformen) an.',
+        ziel: ['est', 'recedat', 'fertur', 'est#2'], auch: ['facile', 'lapsus'],
+        tipp: 'Vier Teilsätze → vier Prädikate. Eines ist zusammengesetzt (Partizip + esse).',
+        falsch: { consequi: 'Infinitiv – keine Personalendung. Er ist hier sogar das Subjekt: „(das) Erreichen ist nicht leicht“.' },
+        erk: 'est (mit facile), recedat, fertur, lapsus est. Bei lapsus est trägt est die Personalendung; zusammen ergeben sie das Perfekt.' },
+      { ph: 'verb', typ: 'wahl',
+        frage: 'consequi und lapsus est sehen passiv aus. Wie übersetzt du sie?',
+        opts: ['passiv: „erreicht werden“, „ist geglitten worden“', 'aktiv: „erreichen“, „ist abgeglitten“ – beides sind Deponentien', 'je nach Zusammenhang'], ok: 1,
+        warum: ['Das ergibt keinen Sinn – und das Wörterbuch zeigt: consequor, labor. Die 1. Person auf -or verrät das Deponens.', null, 'Bei Deponentien gibt es nichts abzuwägen: Form passiv, Bedeutung aktiv.'],
+        erk: 'consequi (consequor) und labi (labor) sind Deponentien: passive Form, aktive Bedeutung. Darum lernst du Verben immer mit der 1. Person Singular – endet sie auf -or, ist es ein Deponens.' },
+      { ph: 'subjekt', typ: 'tippen',
+        frage: 'Im ut-Satz: Wer entfernt sich? Tippe das Subjekt zu recedat an.',
+        ziel: ['quisque'],
+        tipp: 'Gesucht ist ein Nominativ Singular im ut-Satz.',
+        falsch: { via: 'via könnte Nominativ sein – steht aber im si-Satz. Und: Ein Weg entfernt sich nicht.', ea: 'ea steht nach ab: Ablativ.' },
+        erk: 'quisque („jeder“) ist Subjekt von recedat – und bleibt es in den folgenden Gliedsätzen (fertur, lapsus est).' },
+      { ph: 'bezug', typ: 'bezug', fokus: 'ea',
+        frage: 'Worauf beziehen sich die Pronomen ea und illam (beide f. Sg.)? Tippe das Bezugswort an.',
+        ziel: ['vitam'], auch: ['beatam'],
+        tipp: 'Gesucht ist ein Femininum Singular weiter vorn – etwas, dem man sich nähern oder von dem man sich entfernen kann.',
+        erk: 'ea und illam meinen beide beatam vitam – das glückliche Leben. Pronomen führst du immer auf ihr Bezugswort zurück, sonst bleibt die Übersetzung nebulös.' },
+      { ph: 'konstr', typ: 'wahl',
+        frage: 'adeo … ut + Konjunktiv: Welche Sinnrichtung hat der ut-Satz?',
+        opts: ['final: „damit“', 'konsekutiv: „(so sehr), dass“', 'konzessiv: „obwohl“'], ok: 1,
+        warum: ['Final wäre ut ohne „so“-Wort davor. Hier steht adeo – das kündigt eine Folge an.', null, 'Konzessives ut ist selten und steht nicht nach adeo.'],
+        erk: 'Ein „so“-Wort im übergeordneten Satz (adeo, ita, sic, tam, tantus, talis) kündigt ein konsekutives ut an: „so …, dass“. recedat steht deshalb im Konjunktiv – deutsch Indikativ.' },
+      { ph: 'konstr', typ: 'wahl',
+        frage: 'eo … longius … quo … concitatius: Wie gibst du das wieder?',
+        opts: ['„dort weiter …, wo heftiger …“', '„um so weiter …, je heftiger …“', '„deshalb weiter …, weil heftiger …“'], ok: 1,
+        warum: ['eo und quo sind hier keine Ortsangaben: Sie stehen bei Komparativen (longius, concitatius).', null, 'Kausal wäre quod oder quia. quo + Komparativ misst einen Unterschied.'],
+        erk: 'eo/quo + Komparativ (Ablativ des Maßes) = „je … desto / um so“. Im Deutschen stellst du den je-Teil oft nach vorn: „je hastiger er darauf zueilt, um so weiter entfernt er sich“.' },
+      { ph: 'falle', typ: 'wahl',
+        frage: 'si via lapsus est – ist via Nominativ oder Ablativ?',
+        opts: ['Nominativ: „wenn der Weg abgeglitten ist“', 'Ablativ: „wenn er vom Weg abgekommen ist“'], ok: 1,
+        warum: ['lapsus ist maskulin, via feminin – das passt nicht zusammen. Und ein Weg gleitet nicht ab.', null],
+        erk: 'Subjekt bleibt quisque – darum lapsus, maskulin! via ist Ablativ der Trennung: „vom Weg (ab)gekommen“. Regel: Bei -a immer Nominativ, Ablativ und Neutrum Plural gegeneinander prüfen – die Kongruenz entscheidet.' },
+      { ph: 'uebersetzen', typ: 'text',
+        frage: 'Übersetze. Hilfe: adeo non facile = „so wenig leicht“ – in gutem Deutsch „so schwer“.' },
+    ],
+    merke: [
+      '„So“-Wort (adeo, ita, tam, tantus …) + ut + Konjunktiv → konsekutiv: „so …, dass“.',
+      'eo … quo + Komparativ → „um so … je“.',
+      'Deponens (Wörterbuch: -or): passive Form, aktive Bedeutung.',
+    ],
+    woertlich: 'und so sehr ist es nicht leicht, das glückliche Leben zu erreichen, dass sich jeder um so weiter von ihm entfernt, um wie viel heftiger er zu ihm hin eilt, wenn er vom Weg abgeglitten ist;',
+    gut: 'Es ist sogar so schwer, das glückliche Leben zu erreichen, dass sich jeder um so weiter davon entfernt, je hastiger er darauf zueilt – sofern er vom Weg abgekommen ist.',
+  },
+
+  // ───────────────────────────── Satz 3
+  {
+    id: 's3', ref: '1,1',
+    thema: 'Ein Bild vom Reisen: Was passiert, wenn man schnell in die falsche Richtung läuft?',
+    w: [
+      w('quae', 'qui, quae, quod (Relativpronomen)', 'der, die, das; welcher', 'Nom. Sg. f.', 'relativer Satzanschluss: „dieser (Weg)“ – Subjekt zu ducit', 'S', 1),
+      w('ubi', 'ubi', 'mit Ind.: sobald, wenn; (Frage, Ort:) wo', 'Subjunktion', 'leitet den Gliedsatz ein', 'K', 1),
+      w('in', 'in', 'mit Akk.: in, nach (wohin?); mit Abl.: in, auf (wo?)', 'Präposition + Akk.', 'Richtung: wohin?', 'A', 1),
+      w('contrarium', 'contrarius, contraria, contrarium', 'entgegengesetzt; in contrarium: in die Gegenrichtung', 'Akk. Sg. n. (substantiviert)', 'Adverbiale der Richtung', 'A', 1),
+      w('ducit', 'ducere, duco, duxi, ductum', 'führen', '3. Sg. Ind. Präs. Akt.', 'Prädikat des Gliedsatzes', 'P', 1),
+      z(','),
+      w('ipsa', 'ipse, ipsa, ipsum', 'selbst; gerade, eben', 'Nom. Sg. f.', 'Attribut zu velocitas: „gerade die Schnelligkeit“', 'T', 2),
+      w('velocitas', 'velocitas, velocitatis f.', 'Schnelligkeit, Geschwindigkeit', 'Nom. Sg.', 'Subjekt zu fit', 'S', 2),
+      w('maioris', 'maior, maius (Komparativ zu magnus)', 'größer', 'Gen. Sg. n.', 'Attribut zu intervalli', 'T', 2),
+      w('intervalli', 'intervallum, intervalli n.', 'Abstand, Zwischenraum', 'Gen. Sg.', 'Genitivattribut zu causa: „Ursache eines größeren Abstands“', 'T', 2),
+      w('causa', 'causa, causae f.', 'Grund, Ursache; nachgestellt mit Gen.: wegen', 'Nom. Sg.', 'Prädikatsnomen zu fit: „wird zur Ursache“', 'P', 2),
+      w('fit', 'fieri, fio, factus sum', 'werden, geschehen; gemacht werden', '3. Sg. Ind. Präs.', 'Prädikat (Kopula): „wird (zu)“', 'P', 2),
+      z('.'),
+    ],
+    teile: {
+      1: { lvl: 1, name: 'GS 1° · Temporalsatz', info: 'ubi: „sobald, wenn“; quae = relativer Satzanschluss' },
+      2: { lvl: 0, name: 'HS', info: 'Hauptsatz' },
+    },
+    schritte: [
+      { ph: 'gliedern', typ: 'wahl',
+        frage: 'Der Satz beginnt mit quae – direkt nach einem Strichpunkt. Was ist das?',
+        opts: ['Fragepronomen: „welche?“', 'Relativer Satzanschluss: „dieser / diese“', 'Subjunktion: „weil“'], ok: 1,
+        warum: ['Am Satzende steht kein Fragezeichen, und kein Verb des Fragens geht voraus.', null, '„weil“ hieße quod, quia oder quoniam. quae ist ein Relativpronomen.'],
+        erk: 'Ein Relativpronomen am Satzanfang (nach Punkt oder Strichpunkt) knüpft an den vorigen Satz an: relativer Satzanschluss. Übersetze es mit einem Demonstrativ: „dieser“. Es steht oft sogar vor der Subjunktion: quae ubi = „wenn dieser“.' },
+      { ph: 'gliedern', typ: 'wahl',
+        frage: 'Worauf aus dem vorigen Satz bezieht sich quae (Nom. Sg. f.)?',
+        opts: ['vita – das Leben', 'via – der Weg', 'velocitas – die Schnelligkeit'], ok: 1,
+        warum: ['vita ist f. Sg. – grammatisch möglich. Aber „das Leben führt in die Gegenrichtung“? Am Ende des vorigen Satzes ging es um den Weg.', null, 'velocitas steht erst später in diesem Satz – ein Satzanschluss blickt zurück.'],
+        erk: 'Die Grammatik grenzt ein (f. Sg.: vita oder via), der Sinn entscheidet: Nur ein Weg führt „in die Gegenrichtung“. Also: „Wenn dieser (Weg) …“.' },
+      { ph: 'gliedern', typ: 'tippen',
+        frage: 'Tippe das Einleitewort des Gliedsatzes an.',
+        ziel: ['ubi'],
+        tipp: 'Eine Subjunktion für „sobald / wenn“.',
+        falsch: { quae: 'quae knüpft an den vorigen Satz an – die Subjunktion des Gliedsatzes ist ein anderes Wort.', in: 'in ist eine Präposition.' },
+        erk: 'ubi + Indikativ = „sobald, wenn“. Der Gliedsatz reicht bis zum Komma, danach folgt der Hauptsatz.' },
+      { ph: 'verb', typ: 'tippen',
+        frage: 'Tippe die Prädikate an.',
+        ziel: ['ducit', 'fit'], auch: ['causa'],
+        tipp: 'Zwei Teilsätze → zwei Prädikate.',
+        erk: 'ducit im Gliedsatz, fit im Hauptsatz. fit (fieri: werden) ist ein Kopulaverb – es braucht ein Prädikatsnomen. Das kommt gleich.' },
+      { ph: 'subjekt', typ: 'tippen',
+        frage: 'Was wird zur Ursache? Tippe das Subjekt zu fit an.',
+        ziel: ['velocitas'], auch: ['ipsa'],
+        tipp: 'Ein Nominativ Singular im Hauptsatz – mit einem Begleiter.',
+        falsch: { causa: 'causa ist auch Nominativ – aber das Prädikatsnomen: „wird zur Ursache“. Subjekt ist, was zur Ursache wird.' },
+        erk: 'velocitas ist Subjekt; ipsa (Nom. Sg. f.) gehört dazu: „gerade die Schnelligkeit“.' },
+      { ph: 'falle', typ: 'wahl',
+        frage: 'maioris intervalli causa – was ist causa hier?',
+        opts: ['nachgestellte Präposition: „wegen eines größeren Abstands“', 'Prädikatsnomen zu fit: „wird zur Ursache eines größeren Abstands“'], ok: 1,
+        warum: ['Dann hinge fit in der Luft: „Die Schnelligkeit wird wegen eines größeren Abstands …“ – wird was? Der Satz bliebe unvollständig.', null],
+        erk: 'fieri („werden“) braucht ein Prädikatsnomen im Nominativ – das ist causa. Die Lesart „wegen“ (causa + Gen.) liegt nahe, lässt den Satz aber unvollständig. Prüffrage nach jeder Übersetzung: Ist jedes Wort untergebracht und der Satz vollständig?' },
+      { ph: 'uebersetzen', typ: 'text',
+        frage: 'Übersetze. Beginne mit dem Gliedsatz: „Wenn dieser …“.' },
+    ],
+    merke: [
+      'Relativpronomen am Satzanfang → relativer Satzanschluss; deutsch „dieser“.',
+      'Kopulaverben (esse, fieri, videri …) brauchen ein Prädikatsnomen – erst danach suchen, bevor du causa als „wegen“ liest.',
+    ],
+    woertlich: 'Wenn dieser in das Entgegengesetzte führt, wird die Schnelligkeit selbst Ursache eines größeren Abstands.',
+    gut: 'Führt der Weg nämlich in die Gegenrichtung, wird gerade die Geschwindigkeit zur Ursache eines immer größeren Abstands.',
+  },
+
+  // ───────────────────────────── Satz 4
+  {
+    id: 's4', ref: '1,1',
+    thema: 'Daraus folgt der erste Schritt eines Plans.',
+    w: [
+      w('Proponendum', 'proponere, propono, proposui, propositum', 'vor Augen stellen, festlegen, sich vornehmen', 'Gerundivum, Nom. Sg. n.', 'Prädikat (mit est): „muss festgelegt werden“ – „man muss festlegen“', 'P', 1),
+      w('est', 'esse, sum, fui', 'sein', '3. Sg. Ind. Präs.', 'Prädikat (mit Proponendum): Gerundivum + esse = müssen', 'P', 1),
+      w('itaque', 'itaque', 'daher, deshalb', 'Adverb (Konnektor)', 'Folgerung aus den Sätzen davor', 'A', 1),
+      w('primum', 'primum', 'zuerst, erstens', 'Adverb', 'Adverbiale der Reihenfolge – tunc folgt im nächsten Satz', 'A', 1),
+      w('quid', 'quis, quid (Fragepronomen)', 'wer? was?', 'Nom. Sg. n.', 'leitet die indirekte Frage ein: „was (es) ist“', 'K', 2),
+      w('sit', 'esse, sum, fui', 'sein', '3. Sg. Konj. Präs.', 'Prädikat der indirekten Frage – Konjunktiv!', 'P', 2),
+      w('quod', 'qui, quae, quod (Relativpronomen)', 'der, die, das; welcher', 'Akk. Sg. n.', 'leitet den Relativsatz ein; Objekt zu adpetamus', 'O*', 3),
+      w('adpetamus', 'appetere (adpetere), appeto, appetivi, appetitum', 'erstreben, verlangen nach', '1. Pl. Konj. Präs. Akt.', 'Prädikat des Relativsatzes – Konjunktiv durch Modusangleichung', 'P', 3),
+      z(';'),
+    ],
+    teile: {
+      1: { lvl: 0, name: 'HS', info: 'Gerundivum + est: „man muss …“' },
+      2: { lvl: 1, name: 'GS 1° · indirekte Frage', info: 'Subjekt zu proponendum est' },
+      3: { lvl: 2, name: 'GS 2° · Relativsatz', info: '„das, was wir erstreben“' },
+    },
+    schritte: [
+      { ph: 'gliedern', typ: 'tippen',
+        frage: 'Tippe die Einleitewörter der Gliedsätze an.',
+        ziel: ['quid', 'quod'],
+        tipp: 'Du kennst die Kombination aus Satz 1.',
+        falsch: { itaque: 'itaque („daher“) knüpft an das Vorige an, leitet aber keinen Gliedsatz ein.' },
+        erk: 'quid sit quod … – genau wie in Satz 1: „was es ist, das …“. Gleiche Struktur, gleiche Lösung. Solche Wiederholungen erkennst du mit der Zeit auf einen Blick.' },
+      { ph: 'verb', typ: 'tippen',
+        frage: 'Tippe die finiten Verbformen an.',
+        ziel: ['est', 'sit', 'adpetamus'], auch: ['Proponendum'],
+        tipp: 'Drei Teilsätze. Im Hauptsatz gehört zum finiten Verb noch eine nd-Form.',
+        erk: 'est, sit, adpetamus. Zum Hauptsatzprädikat gehört Proponendum: Proponendum est.' },
+      { ph: 'verb', typ: 'wahl',
+        frage: 'Proponendum est: nd-Form + esse. Was bedeutet das?',
+        opts: ['„es wurde vor Augen gestellt“', '„man muss vor Augen stellen“ / „es muss festgelegt werden“', '„es wird gerade vor Augen gestellt“'], ok: 1,
+        warum: ['Das wäre propositum est (Perfekt Passiv).', null, 'Das wäre proponitur.'],
+        erk: 'Gerundivum + esse drückt eine Notwendigkeit aus: „muss … werden“. Ohne Person im Dativ: „man muss“. Das ist die erste Aufforderung im Text – Seneca beginnt einen Plan.' },
+      { ph: 'falle', typ: 'wahl',
+        frage: 'adpetamus – unter welchem Stichwort suchst du im Wörterbuch?',
+        opts: ['adpeto – so steht es ja da', 'appeto – ad- gleicht sich an', 'peto – die Vorsilbe lässt man weg'], ok: 1,
+        warum: ['Manche Wörterbücher verweisen von adp- auf app- – der Eintrag selbst steht in der Regel unter appeto.', null, 'peto heißt auch „erstreben“ – nah dran, aber appetere ist ein eigenes Wort mit eigenem Eintrag.'],
+        erk: 'Vorsilben gleichen sich oft an: ad-p → app-, in-p → imp-, con-p → comp-. Deine Ausgabe schreibt die ursprüngliche Form (adpetamus, später inpellit). Konjunktiv wieder durch die indirekte Frage.' },
+      { ph: 'uebersetzen', typ: 'text',
+        frage: 'Übersetze. Satz 1 hilft dir beim Gliedsatzteil.' },
+    ],
+    merke: [
+      'nd-Form + esse = müssen (Gerundivum der Notwendigkeit); ohne Dativ: „man muss“.',
+      'Vorsilben gleichen sich an: adp → app, inp → imp, conp → comp – im Wörterbuch beide Schreibungen prüfen.',
+    ],
+    woertlich: 'Vor Augen zu stellen ist deshalb zuerst, was es ist, das wir erstreben;',
+    gut: 'Zuerst müssen wir uns also klarmachen, was es ist, das wir erstreben;',
+  },
+
+  // ───────────────────────────── Satz 5
+  {
+    id: 's5', ref: '1,1',
+    thema: 'Der zweite Schritt – und was man unterwegs erkennt.',
+    w: [
+      w('tunc', 'tunc', 'dann, darauf', 'Adverb', 'setzt die Reihe fort: primum … tunc', 'A', 1),
+      w('circumspiciendum', 'circumspicere, circumspicio, circumspexi, circumspectum', 'sich ringsum umsehen, überlegen', 'Gerundivum, Nom. Sg. n.', 'Prädikat – est ist zu ergänzen (Ellipse): „man muss sich umsehen“', 'P', 1),
+      w('qua', 'qua (Frageadverb)', 'wo? auf welchem Weg?', 'Adverb (eigentlich Abl. Sg. f.: „auf welchem [Weg]“)', 'leitet die indirekte Frage ein', 'A*', 2),
+      w('contendere', 'contendere, contendo, contendi, contentum', 'eilen; sich anstrengen; behaupten', 'Inf. Präs. Akt.', 'Ergänzung zu possimus: „eilen können“', 'O', 2),
+      w('illo', 'illo (Adverb)', 'dorthin', 'Adverb der Richtung', '„dorthin“ – zum Ziel, dem glücklichen Leben', 'A', 2),
+      w('celerrime', 'celeriter (Superlativ: celerrime)', 'schnell; Superlativ: am schnellsten', 'Adverb im Superlativ', 'Adverbiale zu contendere', 'A', 2),
+      w('possimus', 'posse, possum, potui', 'können', '1. Pl. Konj. Präs.', 'Prädikat der indirekten Frage – Konjunktiv!', 'P', 2),
+      z(','),
+      w('intellecturi', 'intellegere, intellego, intellexi, intellectum', 'erkennen, verstehen, einsehen', 'Part. Fut. Akt. (PFA), Nom. Pl. m.', 'Participium coniunctum, bezogen auf „wir“: „im Begriff zu erkennen“ → „wir werden erkennen“', 'A', 3),
+      w('in', 'in', 'mit Akk.: in, nach (wohin?); mit Abl.: in, auf (wo?)', 'Präposition + Abl.', 'wo?', 'A', 3),
+      w('ipso', 'ipse, ipsa, ipsum', 'selbst; gerade', 'Abl. Sg. n.', 'Attribut zu itinere', 'T', 3),
+      w('itinere', 'iter, itineris n.', 'Weg, Reise, Marsch', 'Abl. Sg.', 'Adverbiale des Ortes: „unterwegs“', 'A', 3),
+      z(','),
+      w('si', 'si', 'wenn, falls', 'Subjunktion', 'leitet den Bedingungssatz ein', 'K', 4),
+      w('modo', 'modo', 'nur; si modo: wenn nur, sofern', 'Adverb', 'si modo = „sofern nur“', 'A', 4),
+      w('rectum', 'rectus, recta, rectum', 'gerade, richtig', 'Nom. Sg. n.', 'Prädikatsnomen; das Subjekt (iter) ist mitzudenken – das Genus verrät es', 'P', 4),
+      w('erit', 'esse, sum, fui', 'sein', '3. Sg. Ind. Fut. I', 'Prädikat; Futur: Latein ist zeitlich genau, deutsch genügt Präsens', 'P', 4),
+      z(','),
+      w('quantum', 'quantus, quanta, quantum', 'wie groß; quantum: wie viel', 'Nom. Sg. n. (Fragewort)', 'leitet die indirekte Frage ein; Subjekt zu profligetur', 'S*', 5),
+      w('cotidie', 'cotidie', 'täglich', 'Adverb', 'Adverbiale der Zeit', 'A', 5),
+      w('profligetur', 'profligare, profligo, profligavi, profligatum', 'niederschlagen; (eine Sache) weit voranbringen, fast erledigen', '3. Sg. Konj. Präs. Pass.', 'Prädikat der indirekten Frage: „wie viel bewältigt wird“', 'P', 5),
+      w('quantoque', 'quanto + -que', 'quanto: um wie viel (mit Komparativ); -que: und', 'Abl. Sg. n. (Ablativ des Maßes) + -que', 'leitet die 2. indirekte Frage ein: „und um wie viel näher“', 'A*', 6),
+      w('propius', 'prope (Komparativ: propius)', 'nahe; Komparativ: näher', 'Adverb im Komparativ', 'propius ab eo: „näher bei dem“', 'A', 6),
+      w('ab', 'a/ab (Präp. + Abl.)', 'von; mit prope: bei', 'Präposition + Abl.', 'prope ab = nahe bei', 'A', 6),
+      w('eo', 'is, ea, id', 'er, sie, es; der(jenige)', 'Abl. Sg. n.', 'Bezugswort des Relativsatzes ad quod: „(bei) dem, wozu …“', 'A', 6),
+      w('simus', 'esse, sum, fui', 'sein', '1. Pl. Konj. Präs.', 'Prädikat der indirekten Frage – Konjunktiv!', 'P', 6),
+      w('ad', 'ad (Präp. + Akk.)', 'zu, auf … zu', 'Präposition + Akk.', 'ad quod: „wozu, wohin“', 'A', 7),
+      w('quod', 'qui, quae, quod (Relativpronomen)', 'der, die, das; welcher', 'Akk. Sg. n.', 'leitet den Relativsatz ein; Bezugswort: eo', 'A*', 7),
+      w('nos', 'nos', 'wir; uns', 'Akk. Pl.', 'Objekt zu inpellit – Subjekt ist cupiditas!', 'O', 7),
+      w('cupiditas', 'cupiditas, cupiditatis f.', 'Begierde, Verlangen, Trieb', 'Nom. Sg.', 'Subjekt zu inpellit', 'S', 7),
+      w('naturalis', 'naturalis, naturale', 'natürlich, von Natur aus', 'Nom. Sg. f.', 'Attribut zu cupiditas (KNG)', 'T', 7),
+      w('inpellit', 'impellere (inpellere), impello, impuli, impulsum', 'antreiben, drängen', '3. Sg. Ind. Präs. Akt.', 'Prädikat des Relativsatzes', 'P', 7),
+      z('.'),
+    ],
+    teile: {
+      1: { lvl: 0, name: 'HS (elliptisch)', info: 'circumspiciendum [est]: „man muss sich umsehen“' },
+      2: { lvl: 1, name: 'GS 1° · indirekte Frage', info: 'qua: „auf welchem Weg“ – abhängig von circumspiciendum' },
+      3: { lvl: 1, name: 'PC · Partizip Futur', info: 'intellecturi, bezogen auf „wir“ – satzwertig' },
+      4: { lvl: 2, name: 'GS 2° · Bedingungssatz', info: 'si modo: „sofern nur“' },
+      5: { lvl: 2, name: 'GS 2° · indirekte Frage', info: 'quantum: „wie viel“ – abhängig von intellecturi' },
+      6: { lvl: 2, name: 'GS 2° · indirekte Frage', info: 'quanto: „um wie viel“ – abhängig von intellecturi' },
+      7: { lvl: 3, name: 'GS 3° · Relativsatz', info: 'ad quod – Bezugswort: eo' },
+    },
+    schritte: [
+      { ph: 'gliedern', typ: 'tippen',
+        frage: 'Ein langer Satz – jetzt zahlt sich die Methode aus. Tippe alle Einleitewörter von Gliedsätzen an.',
+        ziel: ['qua', 'si', 'quantum', 'quantoque', 'quod'],
+        tipp: 'Fünf: ein Fragewort „auf welchem Weg“, eine Subjunktion „wenn“, zwei Fragewörter „wie viel / um wie viel“, ein Relativpronomen.',
+        falsch: { intellecturi: 'Ein Partizip leitet keinen Gliedsatz ein – es bildet aber eine eigene satzwertige Konstruktion. Siehe Satzbild.', tunc: 'tunc („dann“) ist ein Adverb.', ad: 'ad ist eine Präposition – aber ganz nah dran: ad quod gehört zusammen. Tippe das Relativpronomen an.' },
+        erk: 'Das Satzbild zeigt den Schlüssel: Vom Partizip intellecturi hängen drei Gliedsätze ab (si modo …, quantum …, quanto …). Lange Sätze knackst du immer so: erst die Gliederung, dann übersetzen.' },
+      { ph: 'verb', typ: 'tippen',
+        frage: 'Tippe alle finiten Verbformen an.',
+        ziel: ['possimus', 'erit', 'profligetur', 'simus', 'inpellit'], auch: ['circumspiciendum'],
+        tipp: 'Fünf finite Formen – eine davon ist Futur, eine Passiv.',
+        falsch: { contendere: 'Infinitiv – hängt von possimus ab: „eilen können“.', intellecturi: 'Partizip – keine Personalendung.' },
+        erk: 'possimus, erit, profligetur, simus, inpellit. Und der erste Teil, tunc circumspiciendum? Dort fehlt etwas – nächster Schritt.' },
+      { ph: 'verb', typ: 'wahl',
+        frage: 'tunc circumspiciendum – hier fehlt etwas. Was ergänzt du?',
+        opts: ['ein Subjekt: vita', 'est – aus dem vorigen Satz (Proponendum est)', 'nichts, circumspiciendum ist finit'], ok: 1,
+        warum: ['Gerundivum + esse braucht kein Subjekt: „man muss …“.', null, '-ndum hat keine Personalendung, ist also nicht finit.'],
+        erk: 'Ellipse: Ein Wort, das gerade stand, wird nicht wiederholt. Parallel zu Proponendum est: tunc circumspiciendum [est] – „dann muss man sich umsehen“. Die zweite Aufforderung; primum … tunc zählt die Schritte auf.' },
+      { ph: 'konstr', typ: 'wahl',
+        frage: 'intellecturi – welche Form ist das?',
+        opts: ['PPP: „erkannt“', 'PPA: „erkennend“', 'PFA: „im Begriff zu erkennen“'], ok: 2,
+        warum: ['Das PPP hieße intellecti.', 'Das PPA hieße intellegentes.', null],
+        erk: '-urus, -ura, -urum = Partizip Futur Aktiv (PFA). Nom. Pl. m., bezogen auf das „wir“ aus possimus. Im Deutschen: „und dabei werden wir … erkennen“. Von intellecturi hängen die beiden quantum-Fragen ab.' },
+      { ph: 'falle', typ: 'wahl',
+        frage: 'contendere illo – was ist illo hier?',
+        opts: ['Ablativ von ille: „durch jenen“', 'Adverb: „dorthin“'], ok: 1,
+        warum: ['Dann bräuchte illo ein Bezugswort im Ablativ – es gibt keins.', null],
+        erk: 'Bei einem Verb der Bewegung (contendere = eilen) ist illo das Richtungsadverb „dorthin“ (= illuc); gemeint ist das Ziel, das glückliche Leben. Prüffrage bei jedem Pronomen: Wo ist das Bezugswort? Keins da → Adverb prüfen.' },
+      { ph: 'bezug', typ: 'bezug', fokus: 'rectum',
+        frage: 'si modo rectum erit – rectum ist Neutrum. Welches Wort ist als Subjekt mitzudenken? Tippe es an.',
+        ziel: ['itinere'],
+        tipp: 'Gesucht ist ein Neutrum kurz davor.',
+        erk: 'Das Genus führt dich: iter (n.) – „sofern es nur der richtige Weg ist“. erit ist Futur: Latein ist zeitlich genau, im Deutschen genügt das Präsens.' },
+      { ph: 'bezug', typ: 'bezug', fokus: 'naturalis',
+        frage: 'Zu welchem Wort gehört naturalis?',
+        ziel: ['cupiditas'],
+        tipp: 'naturalis kann Nom. Sg. oder Gen. Sg. sein. Gibt es ein Wort, zu dem ein Genitiv passen würde – oder ein Nominativ der 3. Deklination?',
+        falsch: { nos: 'nos ist Plural – naturalis ist Singular.' },
+        erk: 'naturalis gehört zu cupiditas (Nom. Sg. f., 3. Dekl.): „ein natürliches Verlangen“. Damit ist cupiditas Subjekt – und nos muss Akkusativ sein: „wozu uns ein natürliches Verlangen antreibt“.' },
+      { ph: 'uebersetzen', typ: 'text',
+        frage: 'Übersetze Stück für Stück entlang des Satzbilds. Löse das Partizip in einen Hauptsatz auf: „Dabei werden wir … erkennen, …“.' },
+    ],
+    merke: [
+      'Ellipse: Fehlt das Prädikat, ergänze es aus dem Nachbarsatz (hier est).',
+      '-urus, -ura, -urum = PFA → „im Begriff zu“, „werden“.',
+      'Lange Sätze: erst das Satzbild, dann vom Hauptsatz aus nach innen übersetzen.',
+    ],
+    woertlich: 'dann (ist) sich umzusehen, auf welchem Weg wir dorthin am schnellsten eilen können, im Begriff, auf dem Weg selbst zu erkennen – wenn er nur richtig sein wird –, wie viel täglich bewältigt wird und um wie viel näher wir dem sind, wozu uns ein natürliches Verlangen antreibt.',
+    gut: 'dann müssen wir uns umsehen, auf welchem Weg wir am schnellsten dorthin gelangen. Unterwegs werden wir – sofern es der richtige Weg ist – erkennen, wie viel wir täglich hinter uns bringen und um wie viel wir dem näher kommen, wozu uns ein natürliches Verlangen drängt.',
+  },
+
+  // ───────────────────────────── Satz 6
+  {
+    id: 's6', ref: '1,2',
+    thema: 'Was geschieht, wenn wir der Menge folgen statt einem Führer.',
+    w: [
+      w('Quam diu', 'quamdiu (auch: quam diu)', 'solange (als); wie lange?', 'Subjunktion', 'leitet den Temporalsatz ein', 'K', 1),
+      w('quidem', 'quidem', 'freilich, allerdings, gewiss', 'Adverb (Hervorhebung)', 'betont: „solange freilich“', 'A', 1),
+      w('passim', 'passim', 'weit und breit, überall umher, planlos', 'Adverb', 'Adverbiale zu vagamur', 'A', 1),
+      w('vagamur', 'vagari, vagor, vagatus sum (Deponens)', 'umherschweifen, umherirren', '1. Pl. Ind. Präs. (Deponens)', 'Prädikat des Temporalsatzes', 'P', 1),
+      w('non', 'non', 'nicht', 'Negation', 'non … sed: nicht …, sondern', 'A', 2),
+      w('ducem', 'dux, ducis m.', 'Führer, Anführer', 'Akk. Sg.', 'Objekt zu secuti', 'O', 2),
+      w('secuti', 'sequi, sequor, secutus sum (Deponens)', 'folgen', 'Part. Perf. (Deponens), Nom. Pl. m.', 'Participium coniunctum zum „wir“ von vagamur: „indem wir folgen“ – aktiv!', 'A', 2),
+      w('sed', 'sed', 'aber, sondern', 'Konjunktion', 'non … sed: verbindet die Objekte', 'K', 2),
+      w('fremitum', 'fremitus, fremitus m.', 'Lärm, Getöse, Murren', 'Akk. Sg.', 'Objekt zu secuti', 'O', 2),
+      w('et', 'et', 'und', 'Konjunktion', 'verbindet fremitum und clamorem', 'K', 2),
+      w('clamorem', 'clamor, clamoris m.', 'Geschrei, Lärm', 'Akk. Sg.', 'Objekt zu secuti', 'O', 2),
+      w('dissonum', 'dissonus, dissona, dissonum', 'misstönend, verworren, uneinig', 'Akk. Sg. m.', 'Attribut zu clamorem', 'T', 2),
+      w('in', 'in', 'mit Akk.: in, nach (wohin?); mit Abl.: in, auf (wo?)', 'Präposition + Akk.', 'in diversa: „in verschiedene Richtungen“', 'A', 2),
+      w('diversa', 'diversus, diversa, diversum', 'entgegengesetzt, verschieden', 'Akk. Pl. n. (substantiviert)', 'Adverbiale der Richtung zu vocantium', 'A', 2),
+      w('vocantium', 'vocare, voco, vocavi, vocatum', 'rufen', 'Part. Präs. Akt. (PPA), Gen. Pl. (substantiviert)', 'Genitivattribut zu fremitum et clamorem: „der Rufenden“', 'T', 2),
+      z(','),
+      w('conteretur', 'conterere, contero, contrivi, contritum', 'zerreiben, aufreiben, vergeuden', '3. Sg. Ind. Fut. I Pass.', 'Prädikat des Hauptsatzes', 'P', 3),
+      w('vita', 'vita, vitae f.', 'Leben', 'Nom. Sg.', 'Subjekt zu conteretur', 'S', 3),
+      w('inter', 'inter (Präp. + Akk.)', 'zwischen, unter, inmitten', 'Präposition + Akk.', 'inter errores', 'A', 3),
+      w('errores', 'error, erroris m.', 'Irrtum; Umherirren, Irrweg', 'Akk. Pl.', 'Adverbiale: „zwischen Irrwegen“', 'A', 3),
+      z(','),
+      w('brevis', 'brevis, breve', 'kurz', 'Nom. Sg. f.', 'prädikatives Attribut zu vita: „(das Leben,) das kurz ist“', 'T', 3),
+      w('etiam si', 'etiamsi (auch: etiam si)', 'auch wenn, selbst wenn', 'Subjunktion', 'leitet den Konzessivsatz ein', 'K', 4),
+      w('dies', 'dies, diei m.', 'Tag', 'Akk. Pl.', 'Akkusativ der Zeitdauer: „Tage hindurch“', 'A', 4),
+      w('noctesque', 'nox, noctis f. + -que', 'Nacht; -que: und', 'Akk. Pl. + -que', 'Akkusativ der Zeitdauer: „und Nächte hindurch“', 'A', 4),
+      w('bonae', 'bonus, bona, bonum', 'gut', 'Dat. Sg. f.', 'Attribut zu menti', 'T', 4),
+      w('menti', 'mens, mentis f.', 'Geist, Verstand, Gesinnung; bona mens: Vernunft, sittliche Einsicht', 'Dat. Sg.', 'Dativ des Vorteils: „für die gute Gesinnung“', 'O', 4),
+      w('laboremus', 'laborare, laboro, laboravi, laboratum', 'arbeiten, sich mühen', '1. Pl. Konj. Präs. Akt.', 'Prädikat des Konzessivsatzes – Konjunktiv: „selbst wenn wir … arbeiteten“', 'P', 4),
+      z('.'),
+    ],
+    teile: {
+      1: { lvl: 1, name: 'GS 1° · Temporalsatz', info: 'quam diu: „solange“' },
+      2: { lvl: 2, name: 'PC · Partizip Perfekt', info: 'secuti, bezogen auf „wir“: „wobei wir … folgen“' },
+      3: { lvl: 0, name: 'HS', info: 'Hauptsatz' },
+      4: { lvl: 1, name: 'GS 1° · Konzessivsatz', info: 'etiam si: „selbst wenn“ – erläutert brevis' },
+    },
+    schritte: [
+      { ph: 'gliedern', typ: 'tippen',
+        frage: 'Tippe die Einleitewörter der Gliedsätze an.',
+        ziel: ['Quam diu', 'etiam si'],
+        tipp: 'Zwei zweiteilige Subjunktionen: „solange“ und „selbst wenn“.',
+        falsch: { sed: 'sed verbindet hier zwei Objekte (non ducem … sed fremitum …) – keinen Satz.', et: 'et verbindet zwei Wörter: fremitum et clamorem.' },
+        erk: 'quam diu = „solange“ (temporal), etiam si = „selbst wenn“ (konzessiv). Dazwischen steht der Hauptsatz: conteretur vita inter errores.' },
+      { ph: 'verb', typ: 'tippen',
+        frage: 'Tippe die Prädikate an.',
+        ziel: ['vagamur', 'conteretur', 'laboremus'],
+        tipp: 'Drei: 1. Pl., 3. Sg., 1. Pl.',
+        falsch: { secuti: 'Partizip (Perfekt) – keine Personalendung.', vocantium: 'Partizip Präsens im Gen. Pl. – kein Prädikat.' },
+        erk: 'vagamur, conteretur, laboremus. Die zwei Partizipien secuti und vocantium sind die nächste Baustelle.' },
+      { ph: 'falle', typ: 'wahl',
+        frage: 'conteretur – welches Tempus?',
+        opts: ['Präsens Passiv: „wird aufgerieben“', 'Futur I Passiv: „wird aufgerieben werden“', 'Konjunktiv Präsens Passiv'], ok: 1,
+        warum: ['conterere gehört zur 3. Konjugation – das Präsens hieße conteritur.', null, 'Der Konjunktiv Präsens der 3. Konjugation hat -a-: conteratur.'],
+        erk: '3./4. Konjugation: -e- ist das Futur-Signal (außer in der 1. Sg. -am). Präsens wäre conteritur, Konjunktiv conteratur. Achtung: In der 2. Konjugation ist -etur Präsens (videtur). Deshalb: erst die Konjugation im Wörterbuch nachsehen, dann bestimmen.' },
+      { ph: 'subjekt', typ: 'tippen',
+        frage: 'Was wird aufgerieben? Tippe das Subjekt zu conteretur an.',
+        ziel: ['vita'],
+        tipp: 'Nominativ Singular im Hauptsatz.',
+        falsch: { brevis: 'brevis ist Nom. Sg. f. – aber ein Adjektiv. Es beschreibt das Subjekt.', dies: 'dies könnte Nominativ sein – steht aber im etiam-si-Satz.' },
+        erk: 'vita ist Subjekt. Zu vagamur und laboremus gehört das „wir“ aus der Endung.' },
+      { ph: 'konstr', typ: 'wahl',
+        frage: 'non ducem secuti: sequi ist ein Deponens. Wie übersetzt du secuti?',
+        opts: ['passiv: „gefolgt worden“', 'aktiv: „gefolgt“ / „indem wir folgen“'], ok: 1,
+        warum: ['Deponentien haben passive Formen, aber aktive Bedeutung – auch im Partizip.', null],
+        erk: 'Das Partizip Perfekt eines Deponens ist aktiv: secuti = „gefolgt“. Nom. Pl. m. → bezogen auf das „wir“ von vagamur (PC). Objekte: ducem bzw. fremitum et clamorem. Auflösen: „wobei wir nicht einem Führer folgen, sondern …“.' },
+      { ph: 'konstr', typ: 'wahl',
+        frage: 'vocantium – was steckt dahinter?',
+        opts: ['Gen. Pl. eines substantivierten PPA: „der Rufenden“', 'Infinitiv: „rufen“', 'Gerundium: „des Rufens“'], ok: 0,
+        warum: [null, 'Der Infinitiv hieße vocare.', 'Das Gerundium hätte -nd-: vocandi.'],
+        erk: '-nt- ist das Signal für das Partizip Präsens Aktiv. Ohne Bezugswort ist es substantiviert: „der (in alle Richtungen) Rufenden“. Im Deutschen auflösen: „von Leuten, die in alle Richtungen rufen“.' },
+      { ph: 'bezug', typ: 'bezug', fokus: 'brevis',
+        frage: 'Zu welchem Wort gehört brevis (Nom. Sg. f.)?',
+        ziel: ['vita'],
+        tipp: 'Suche ein Femininum im Nominativ Singular.',
+        erk: 'brevis gehört zu vita – nachgestellt und betont: „(das Leben,) das ohnehin kurz ist, selbst wenn …“.' },
+      { ph: 'falle', typ: 'wahl',
+        frage: 'dies noctesque – welcher Kasus?',
+        opts: ['Nominativ: „Tage und Nächte arbeiten“', 'Akkusativ der Zeitdauer: „Tag und Nacht (hindurch)“'], ok: 1,
+        warum: ['laboremus ist 1. Person: Subjekt ist „wir“. Für einen Nominativ ist kein Platz.', null],
+        erk: 'dies noctesque sind Akkusativ Plural der zeitlichen Ausdehnung: „Tage und Nächte lang“. bonae menti ist Dativ des Vorteils: „für die gute Gesinnung“. bona mens ist bei Seneca die Vernunft, die sittliche Einsicht.' },
+      { ph: 'uebersetzen', typ: 'text',
+        frage: 'Übersetze. Beginne mit dem quam-diu-Satz, löse das Partizip auf und schließ brevis mit „ein Leben, das …“ an.' },
+    ],
+    merke: [
+      'Tempus-Falle -etur: in der 3./4. Konjugation Futur, in der 2. Präsens – Konjugation im Wörterbuch prüfen.',
+      'Partizip Perfekt eines Deponens → aktiv übersetzen.',
+      'Akkusativ einer Zeitangabe ohne Präposition → Zeitdauer („Tag und Nacht“).',
+    ],
+    woertlich: 'Solange wir freilich überall umherschweifen, nicht einem Führer gefolgt, sondern dem Lärm und dem misstönenden Geschrei der in verschiedene Richtungen Rufenden, wird das Leben inmitten von Irrtümern aufgerieben werden, kurz, auch wenn wir Tage und Nächte für eine gute Gesinnung arbeiten.',
+    gut: 'Solange wir aber planlos umherirren und dabei keinem Führer folgen, sondern dem Lärm und dem wirren Geschrei von Leuten, die in alle Richtungen rufen, wird sich unser Leben in Irrwegen aufreiben – ein Leben, das schon kurz wäre, wenn wir Tag und Nacht an unserer Vernunft arbeiteten.',
+  },
+
+  // ───────────────────────────── Satz 7
+  {
+    id: 's7', ref: '1,2',
+    thema: 'Die Folgerung: Ziel und Weg festlegen – mit Hilfe.',
+    w: [
+      w('Decernatur', 'decernere, decerno, decrevi, decretum', 'entscheiden, beschließen', '3. Sg. Konj. Präs. Pass.', 'Prädikat des Hauptsatzes – Konjunktiv im Hauptsatz = Aufforderung', 'P', 1),
+      w('itaque', 'itaque', 'daher, deshalb', 'Adverb (Konnektor)', 'Folgerung', 'A', 1),
+      w('et', 'et', 'und; et … et: sowohl … als auch', 'Konjunktion', 'et … et verbindet die zwei Fragen', 'K', 2),
+      w('quo', 'quo (Frageadverb)', 'wohin?', 'Adverb', 'leitet die 1. indirekte Frage ein', 'A*', 2),
+      w('tendamus', 'tendere, tendo, tetendi, tentum', 'spannen; streben, eilen, sich richten', '1. Pl. Konj. Präs. Akt.', 'Prädikat der indirekten Frage', 'P', 2),
+      w('et', 'et', 'und; et … et: sowohl … als auch', 'Konjunktion', 'zweites Glied von et … et', 'K', 3),
+      w('qua', 'qua (Frageadverb)', 'wo? auf welchem Weg?', 'Adverb', 'leitet die 2. indirekte Frage ein – tendamus ist zu ergänzen', 'A*', 3),
+      z(','),
+      w('non', 'non', 'nicht', 'Negation', 'non sine: Litotes', 'A', 1),
+      w('sine', 'sine (Präp. + Abl.)', 'ohne', 'Präposition + Abl.', 'non sine = betontes „mit“', 'A', 1),
+      w('perito', 'peritus, perita, peritum', 'erfahren, kundig; substantiviert: ein Kundiger', 'Abl. Sg. m. (substantiviert)', 'Adverbiale: „mit einem Kundigen“', 'A', 1),
+      w('aliquo', 'aliqui, aliqua, aliquod', 'irgendein', 'Abl. Sg. m.', 'Attribut zu perito', 'T', 1),
+      w('cui', 'qui, quae, quod (Relativpronomen)', 'der, die, das; welcher', 'Dat. Sg. m.', 'leitet den Relativsatz ein; Bezugswort: perito – Dativ des Urhebers: „dem … erkundet ist“', 'O*', 4),
+      w('explorata', 'explorare, exploro, exploravi, exploratum', 'erkunden, erforschen', 'PPP Nom. Pl. n. (Teil von explorata sint)', 'Prädikat (mit sint)', 'P', 4),
+      w('sint', 'esse, sum, fui', 'sein', '3. Pl. Konj. Präs.', 'bildet mit explorata den Konj. Perf. Pass.; Konjunktiv: kennzeichnender Relativsatz („einer, dem …“)', 'P', 4),
+      w('ea', 'is, ea, id', 'er, sie, es; Pl. n.: dies, das', 'Nom. Pl. n.', 'Subjekt zu explorata sint; Bezugswort für in quae', 'S', 4),
+      w('in', 'in', 'mit Akk.: in, nach (wohin?); mit Abl.: in, auf (wo?)', 'Präposition + Akk.', 'in quae: „wohinein, worauf zu“', 'A', 5),
+      w('quae', 'qui, quae, quod (Relativpronomen)', 'der, die, das; welcher', 'Akk. Pl. n.', 'leitet den Relativsatz ein; Bezugswort: ea', 'A*', 5),
+      w('procedimus', 'procedere, procedo, processi, processum', 'vorrücken, vorangehen', '1. Pl. Ind. Präs. Akt.', 'Prädikat des Relativsatzes', 'P', 5),
+      z(','),
+      w('quoniam', 'quoniam', 'da ja, weil ja', 'Subjunktion', 'leitet den Kausalsatz ein', 'K', 6),
+      w('quidem', 'quidem', 'freilich, allerdings', 'Adverb', 'Hervorhebung', 'A', 6),
+      w('non', 'non', 'nicht', 'Negation', 'verneint eadem', 'A', 6),
+      w('eadem', 'idem, eadem, idem', 'derselbe, dieselbe, dasselbe; idem … qui: derselbe wie', 'Nom. Sg. f.', 'Attribut zu condicio – weit getrennt!', 'T', 6),
+      w('hic', 'hic (Adverb)', 'hier', 'Adverb – nicht das Pronomen!', '„hier“: auf dem Weg zum glücklichen Leben', 'A', 6),
+      w('quae', 'qui, quae, quod (Relativpronomen)', 'der, die, das; welcher', 'Nom. Sg. f.', 'eadem … quae: „dieselbe wie“; Subjekt, est ist zu ergänzen', 'S*', 7),
+      w('in', 'in', 'mit Akk.: in, nach (wohin?); mit Abl.: in, auf (wo?)', 'Präposition + Abl.', 'wo?', 'A', 7),
+      w('ceteris', 'ceteri, ceterae, cetera', 'die übrigen', 'Abl. Pl. f.', 'Attribut zu peregrinationibus', 'T', 7),
+      w('peregrinationibus', 'peregrinatio, peregrinationis f.', 'Reise (in der Fremde), Aufenthalt im Ausland', 'Abl. Pl.', 'Adverbiale: „auf den übrigen Reisen“', 'A', 7),
+      w('condicio', 'condicio, condicionis f.', 'Lage, Bedingung, Verhältnisse', 'Nom. Sg.', 'Subjekt des Kausalsatzes', 'S', 6),
+      w('est', 'esse, sum, fui', 'sein', '3. Sg. Ind. Präs.', 'Prädikat des Kausalsatzes', 'P', 6),
+      z(':'),
+    ],
+    teile: {
+      1: { lvl: 0, name: 'HS · Aufforderung', info: 'Konjunktiv im Hauptsatz (Iussiv): „es soll entschieden werden“' },
+      2: { lvl: 1, name: 'GS 1° · indirekte Frage', info: 'quo: „wohin“' },
+      3: { lvl: 1, name: 'GS 1° · indirekte Frage', info: 'qua: „auf welchem Weg“ – tendamus ist zu ergänzen' },
+      4: { lvl: 1, name: 'GS 1° · Relativsatz', info: 'cui – Bezugswort: perito' },
+      5: { lvl: 2, name: 'GS 2° · Relativsatz', info: 'in quae – Bezugswort: ea' },
+      6: { lvl: 1, name: 'GS 1° · Kausalsatz', info: 'quoniam: „da ja“' },
+      7: { lvl: 2, name: 'GS 2° · Vergleich', info: 'eadem … quae: „dieselbe wie“ – est ist zu ergänzen' },
+    },
+    schritte: [
+      { ph: 'gliedern', typ: 'tippen',
+        frage: 'Tippe alle Einleitewörter der Gliedsätze an.',
+        ziel: ['quo', 'qua', 'cui', 'quae', 'quoniam', 'quae#2'],
+        tipp: 'Sechs: zwei Fragewörter (wohin? auf welchem Weg?), zwei Relativpronomen im mittleren Teil, eine Subjunktion „da ja“, ein Relativpronomen am Ende.',
+        falsch: { hic: 'hic ist hier das Adverb „hier“ – kein Pronomen und kein Einleitewort.', et: 'et … et = „sowohl … als auch“: verbindet die zwei Fragen, leitet sie aber nicht ein.', 'et#2': 'et … et = „sowohl … als auch“: verbindet die zwei Fragen, leitet sie aber nicht ein.', in: 'in ist eine Präposition – das Relativpronomen steht direkt dahinter.' },
+        erk: 'Ein Hauptsatz, sechs Gliedsätze. Der Doppelpunkt am Ende kündigt eine Erklärung an – das ist Satz 8.' },
+      { ph: 'verb', typ: 'tippen',
+        frage: 'Tippe die finiten Verbformen an.',
+        ziel: ['Decernatur', 'tendamus', 'sint', 'procedimus', 'est'], auch: ['explorata'],
+        tipp: 'Fünf. Eine steht gleich am Anfang.',
+        erk: 'Fünf finite Formen für sieben Teilsätze? Zwei Ellipsen: et qua [tendamus] und quae in ceteris peregrinationibus [est]. Geht die Zählung nicht auf, suchst du nach Ellipsen.' },
+      { ph: 'verb', typ: 'wahl',
+        frage: 'Decernatur steht im Konjunktiv – aber in einem Hauptsatz. Was heißt das?',
+        opts: ['indirekte Frage', 'Aufforderung (Iussiv): „es soll entschieden werden“', 'Irrealis: „es würde entschieden“'], ok: 1,
+        warum: ['Eine indirekte Frage braucht ein Fragewort und ein übergeordnetes Verb. Decernatur steht selbst ganz oben.', null, 'Für einen Irrealis fehlen die Signale: Konjunktiv Imperfekt oder Plusquamperfekt, meist mit si.'],
+        erk: 'Konjunktiv im Hauptsatz ohne Einleitewort = Wunsch oder Aufforderung. Hier die dritte Aufforderung: Proponendum est → circumspiciendum → Decernatur. Gutes Deutsch: „Wir müssen also entscheiden …“.' },
+      { ph: 'konstr', typ: 'wahl',
+        frage: 'non sine perito aliquo – was ist das für eine Ausdrucksweise?',
+        opts: ['Litotes: doppelte Verneinung = betontes „mit“', 'einfache Verneinung: „ohne einen Kundigen“'], ok: 0,
+        warum: [null, 'non hebt sine auf: „nicht ohne“.'],
+        erk: 'non sine = „nicht ohne“ = „unbedingt mit“. Zwei Verneinungen heben sich auf und betonen. Wiedergabe: „und zwar mit einem Kundigen“.' },
+      { ph: 'falle', typ: 'wahl',
+        frage: 'cui explorata sint ea – was ist ea?',
+        opts: ['Abl. Sg. f.: „durch sie“', 'Nom. Pl. n.: „die Dinge, das“ – Subjekt zu explorata sint'], ok: 1,
+        warum: ['explorata sint braucht ein Subjekt im Nom. Pl. n. – ea ist das einzige Wort, das passt.', null],
+        erk: 'explorata ist Nom. Pl. n. – ea passt in KNG dazu. ea in quae procedimus = „das, worauf wir zugehen“. cui ist Dativ des Urhebers beim Passiv: „dem … erkundet ist“ = „der … erkundet hat“.' },
+      { ph: 'bezug', typ: 'bezug', fokus: 'eadem',
+        frage: 'Zu welchem Wort gehört eadem (Nom. Sg. f.)?',
+        ziel: ['condicio'],
+        tipp: 'Weit weg – am Ende des Kausalsatzes.',
+        falsch: { 'quae#2': 'quae gehört zu eadem dazu (idem … qui: „derselbe wie“), ist aber nicht sein Bezugswort.' },
+        erk: 'eadem … condicio: weit getrennt (Hyperbaton). idem … qui = „derselbe wie“: „hier gelten nicht dieselben Verhältnisse wie auf den übrigen Reisen“.' },
+      { ph: 'uebersetzen', typ: 'text',
+        frage: 'Übersetze. Die Aufforderung darfst du frei wiedergeben: „Wir müssen also entscheiden …“.' },
+    ],
+    merke: [
+      'Konjunktiv im Hauptsatz ohne Einleitewort → Aufforderung oder Wunsch.',
+      'hic: Pronomen oder Adverb „hier“? Gibt es ein Bezugswort in KNG? Nein → Adverb.',
+      'non sine = Litotes → betontes „mit“.',
+      'Weniger Prädikate als Teilsätze → Ellipse suchen.',
+    ],
+    woertlich: 'Es soll deshalb entschieden werden, sowohl wohin wir streben als auch auf welchem Weg, nicht ohne irgendeinen Kundigen, dem das erkundet ist, worauf wir zugehen, da ja hier nicht dieselbe Lage ist, die auf den übrigen Reisen (ist):',
+    gut: 'Wir müssen also entscheiden, wohin wir wollen und auf welchem Weg – und zwar mit einem Kundigen, der das Gelände erkundet hat, in das wir vorstoßen; denn hier herrschen nicht dieselben Verhältnisse wie auf anderen Reisen:',
+  },
+
+  // ───────────────────────────── Satz 8
+  {
+    id: 's8', ref: '1,2',
+    thema: 'Warum dieser Weg anders ist als eine gewöhnliche Reise.',
+    w: [
+      w('in', 'in', 'mit Akk.: in, nach (wohin?); mit Abl.: in, auf (wo?)', 'Präposition + Abl.', 'wo?', 'A', 1),
+      w('illis', 'ille, illa, illud', 'jener, jene, jenes', 'Abl. Pl. f.', 'bezieht sich auf ceteris peregrinationibus: „auf jenen (Reisen)“', 'A', 1),
+      w('comprensus', 'comprehendere (comprendere), comprehendo, comprehendi, comprehensum', 'ergreifen, erfassen, begreifen', 'PPP Nom. Sg. m.', 'Attribut zu limes (KNG): „ein (einmal) erfasster, gefundener Pfad“', 'T', 1),
+      w('aliquis', 'aliquis, aliquid (adjektivisch: aliqui)', 'irgendein, (irgend)jemand', 'Nom. Sg. m.', 'Attribut zu limes', 'T', 1),
+      w('limes', 'limes, limitis m.', 'Grenzweg, Rain, Pfad', 'Nom. Sg.', 'Subjekt 1 zu patiuntur', 'S', 1),
+      w('et', 'et', 'und', 'Konjunktion', 'verbindet die zwei Subjekte', 'K', 1),
+      w('interrogati', 'interrogare, interrogo, interrogavi, interrogatum', 'fragen, befragen', 'PPP Nom. Pl. m.', 'Participium coniunctum zu incolae: „befragt“ → „wenn man sie fragt“', 'T', 1),
+      w('incolae', 'incola, incolae m.', 'Einwohner, Einheimischer', 'Nom. Pl.', 'Subjekt 2 zu patiuntur', 'S', 1),
+      w('non', 'non', 'nicht', 'Negation', 'verneint patiuntur', 'A', 1),
+      w('patiuntur', 'pati, patior, passus sum (Deponens)', 'erleiden; zulassen, dulden', '3. Pl. Ind. Präs. (Deponens)', 'Prädikat von Hauptsatz 1: „lassen nicht zu“', 'P', 1),
+      w('errare', 'errare, erro, erravi, erratum', '(umher)irren, sich irren', 'Inf. Präs. Akt.', 'Ergänzung zu patiuntur: „(sich) verirren“', 'O', 1),
+      z(','),
+      w('at', 'at', 'aber, dagegen', 'Konjunktion (Gegensatz)', 'verbindet Hauptsatz 1 und 2', 'K', 2),
+      w('hic', 'hic (Adverb)', 'hier', 'Adverb – nicht das Pronomen!', 'Gegensatz zu in illis', 'A', 2),
+      w('tritissima', 'tritus, trita, tritum (Superlativ: tritissimus)', 'abgerieben, viel begangen, ausgetreten (PPP von terere)', 'Nom. Sg. f., Superlativ', 'Attribut zu via', 'T', 2),
+      w('quaeque', 'quisque, quaeque, quidque', 'jeder', 'Nom. Sg. f.', 'Superlativ + quisque: „gerade der …-ste“', 'T', 2),
+      w('via', 'via, viae f.', 'Weg, Straße', 'Nom. Sg.', 'Subjekt zu decipit', 'S', 2),
+      w('et', 'et', 'und', 'Konjunktion', 'verbindet die zwei Superlative', 'K', 2),
+      w('celeberrima', 'celeber, celebris, celebre (Superlativ: celeberrimus)', 'belebt, viel besucht; berühmt', 'Nom. Sg. f., Superlativ', 'Attribut zu via', 'T', 2),
+      w('maxime', 'maxime (Superlativ zu magnopere)', 'am meisten, besonders', 'Adverb im Superlativ', 'Adverbiale zu decipit', 'A', 2),
+      w('decipit', 'decipere, decipio, decepi, deceptum', 'täuschen, betrügen', '3. Sg. Ind. Präs. Akt.', 'Prädikat von Hauptsatz 2', 'P', 2),
+      z('.'),
+    ],
+    teile: {
+      1: { lvl: 0, name: 'HS 1', info: 'in illis: auf den anderen Reisen' },
+      2: { lvl: 0, name: 'HS 2', info: 'at hic: hier dagegen' },
+    },
+    schritte: [
+      { ph: 'gliedern', typ: 'wahl',
+        frage: 'in illis … at hic … – worauf bezieht sich illis?',
+        opts: ['auf errores (Satz 6)', 'auf ceteris peregrinationibus (Satz 7): „auf jenen (anderen Reisen)“', 'auf incolae'], ok: 1,
+        warum: ['Satz 6 liegt zu weit zurück – und der Doppelpunkt am Ende von Satz 7 kündigt genau diese Erklärung an.', null, 'incolae ist Nominativ und gehört in diesen Satz; illis steht nach in im Ablativ.'],
+        erk: 'Der Doppelpunkt in Satz 7 kündigt die Erklärung an: in illis (auf anderen Reisen) … at hic (hier, auf dem Weg zum glücklichen Leben) … – ein Gegensatzpaar. Zwei Hauptsätze, kein Gliedsatz.' },
+      { ph: 'verb', typ: 'tippen',
+        frage: 'Tippe die Prädikate an.',
+        ziel: ['patiuntur', 'decipit'],
+        tipp: 'Zwei Hauptsätze → zwei Prädikate.',
+        falsch: { errare: 'Infinitiv – Ergänzung zu patiuntur: „lassen nicht zu, (sich) zu verirren“.', comprensus: 'Partizip (PPP) – keine Personalendung.', interrogati: 'Partizip (PPP) – keine Personalendung.' },
+        erk: 'patiuntur (Deponens: „lassen zu“) und decipit, verbunden durch at („dagegen“).' },
+      { ph: 'subjekt', typ: 'tippen',
+        frage: 'patiuntur ist Plural. Tippe beide Subjekte an.',
+        ziel: ['limes', 'incolae'],
+        tipp: 'Zwei Nominative, verbunden mit et – jedes mit einem Begleiter.',
+        falsch: { illis: 'illis steht nach in: Ablativ.', comprensus: 'comprensus ist Nominativ – aber ein Partizip, das ein Substantiv begleitet.', interrogati: 'interrogati begleitet ein Substantiv.' },
+        erk: 'limes et incolae: zwei Subjekte → Prädikat im Plural.' },
+      { ph: 'falle', typ: 'wahl',
+        frage: 'interrogati incolae – incolae endet auf -ae. Welches Genus?',
+        opts: ['Femininum – a-Deklination', 'Maskulinum – incola ist eine männliche Personenbezeichnung'], ok: 1,
+        warum: ['Dann hieße das Partizip interrogatae. Es heißt aber interrogati.', null],
+        erk: 'Personenbezeichnungen der a-Deklination sind oft maskulin: incola, agricola, nauta, poeta. Darum interrogati (m.). KNG heißt Übereinstimmung im Genus – nicht in der Endung! Das Partizip als PC: „Einheimische, wenn man sie fragt“.' },
+      { ph: 'konstr', typ: 'wahl',
+        frage: 'tritissima quaeque via – Superlativ + quisque. Was heißt das?',
+        opts: ['„gerade der ausgetretenste Weg“ / „jeder besonders ausgetretene Weg“', '„der ausgetretenste Weg und jeder andere“'], ok: 0,
+        warum: [null, 'quaeque steht nicht für sich: Es gehört in KNG zu via und verstärkt den Superlativ.'],
+        erk: 'Superlativ + quisque = „gerade die …-sten“, „jeweils der …-ste“. Senecas Pointe: Je mehr Leute einen Weg gehen, desto mehr täuscht er – die Masse ist kein Führer.' },
+      { ph: 'uebersetzen', typ: 'text',
+        frage: 'Übersetze. comprensus darfst du frei wiedergeben: „ein einmal gefundener Pfad“.' },
+    ],
+    merke: [
+      'Doppelpunkt → eine Erklärung folgt; in illis … at hic = Gegensatzpaar.',
+      'a-Deklination, männliche Person (incola, nauta, agricola) → maskulin. KNG richtet sich nach dem Genus, nicht nach der Endung.',
+      'Superlativ + quisque = „gerade die …-sten“.',
+    ],
+    woertlich: 'auf jenen lassen irgendein erfasster Pfad und befragte Einwohner nicht zu, sich zu verirren, hier aber täuscht gerade der ausgetretenste und belebteste Weg am meisten.',
+    gut: 'Dort verhindern ein einmal gefundener Pfad und die Auskunft der Einheimischen, dass man sich verirrt; hier dagegen führt gerade der ausgetretenste und belebteste Weg am meisten in die Irre.',
+  },
+  ],
+}];
+
+'use strict';
+/* Neue Seite per Foto: Text erkennen → prüfen → Satz für Satz analysieren → in die Bibliothek übernehmen.
+   Braucht Claude (claude.ai-Artefakt). app.js ruft init() mit den Fähigkeiten auf und render() für den Reiter. */
+window.Werkstatt = (() => {
+  // Fertiger Beispielsatz für die Anweisung an Claude – vor bereite() in app.js festhalten, damit keine Laufzeitfelder hineingeraten
+  const BEISPIEL = JSON.stringify(TEXTE[0].saetze[1]);
+  const MAX_JSON = 230000;   // ein Dokument im Konto fasst 256 KiB; darüber muss die Seite geteilt werden
+
+  let api = null;            // { sample, grenzen, laden, speichern, uebernehmen, melde, esc, $ }
+  let st = leer(), fotos = [], vorschau = [], analyseLaeuft = false;
+  const laufend = new Set();  // AbortController der laufenden Aufrufe
+
+  function leer() { return { autor: '', werk: '', stelle: '', unsicher: [], einheiten: [], phase: 1 }; }
+  const str = x => (typeof x === 'string' ? x.trim() : '');
+  // Texte ohne Kapitel- und Abschnittszahlen (z. B. Lehrbuchtexte): laufende Nummer als Stelle
+  const stelle = (e, i) => str(e.ref) || String(i + 1);
+  const nurBuchstaben = t => t.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '');
+  const sichere = () => api.speichern(st);
+
+  // ───────── Texterkennung
+  function promptErkennen(teile, nFotos, rohtext) {
+    const bildInfo = rohtext ? 'Der Text steht unten (eingefügt, nicht als Bild).'
+      : teile > 1
+        ? `Die ${nFotos * teile} Bilder zeigen ${nFotos === 1 ? 'eine Buchseite' : nFotos + ' Buchseiten'}, jede in ${teile} waagrechte Streifen von oben nach unten geschnitten, die sich leicht überlappen. Doppelt sichtbare Zeilen nur einmal übernehmen.`
+        : `Die Bilder zeigen ${nFotos === 1 ? 'eine Buchseite' : nFotos + ' Buchseiten'} in Reihenfolge.`;
+    return `Du hilfst beim Erstellen von Lernmaterial für eine Latein-Übersetzungs-App. ${bildInfo}
+
+Aufgabe: Gib ausschließlich den lateinischen Text wieder. Übernimm nichts anderes – keine deutsche oder sonstige moderne Übersetzung, keine Einleitung, keine Anmerkungen, keine Vokabelangaben, keine Seitenzahlen, keine Kolumnentitel. Steht auf der Seite kein lateinischer Text, gib leere "einheiten" und einen "hinweis" zurück.
+
+Regeln:
+- Schreibweise der Ausgabe genau beibehalten (z. B. adpetamus, inpellit, Satzzeichen, Großschreibung).
+- Silbentrennungen am Zeilenende zusammenfügen (quis- | que → quisque).
+- Kapitel- und Abschnittszahlen wie „1 (1)“ oder „(2)“ nicht in den Text übernehmen, sondern als Stellenangabe "ref" im Format "1,1", "1,2" den Einheiten zuordnen. Hat der Text keine solchen Zahlen, "ref" leer lassen.
+- Zerlege den Text in Lerneinheiten: in der Regel ein Satz bis zum Punkt. Sehr lange Perioden an Strichpunkt oder Doppelpunkt teilen, wenn jeder Teil für sich übersetzbar bleibt (Richtwert höchstens 30 Wörter).
+- Bei unsicheren Lesungen das wahrscheinlichste Wort einsetzen und es in "unsicher" nennen.
+- "autor" und "werk" nur angeben, wenn sie auf der Seite stehen oder der Text eindeutig erkennbar ist; sonst leer lassen.
+
+Antworte nur mit JSON in dieser Form:
+{"autor": "Seneca", "werk": "De vita beata", "stelle": "Kapitel 1, Abschnitt 1–2", "einheiten": [{"ref": "1,1", "text": "Vivere, Gallio frater, omnes beate volunt, …"}], "unsicher": [], "hinweis": ""}${rohtext ? '\n\nText:\n' + rohtext : ''}`;
+  }
+
+  // Fotos in waagrechte Streifen schneiden: die Plattform verkleinert jedes Bild auf etwa 1,2 Megapixel,
+  // Streifen behalten so mehr Auflösung für die Schrift.
+  async function streifen(datei, teile) {
+    const url = URL.createObjectURL(datei);
+    try {
+      const bild = await new Promise((ok, nein) => { const i = new Image(); i.onload = () => ok(i); i.onerror = nein; i.src = url; });
+      const b = bild.naturalWidth, h = bild.naturalHeight, ueber = Math.round(h * 0.06);
+      const skal = Math.min(1, 2400 / Math.max(b, h / teile));
+      const ergebnis = [];
+      for (let k = 0; k < teile; k++) {
+        const y0 = Math.max(0, Math.round(k * h / teile) - ueber), y1 = Math.min(h, Math.round((k + 1) * h / teile) + ueber);
+        const c = document.createElement('canvas');
+        c.width = Math.round(b * skal); c.height = Math.round((y1 - y0) * skal);
+        c.getContext('2d').drawImage(bild, 0, y0, b, y1 - y0, 0, 0, c.width, c.height);
+        ergebnis.push(await new Promise(ok => c.toBlob(ok, 'image/jpeg', 0.9)));
+      }
+      return ergebnis;
+    } finally { URL.revokeObjectURL(url); }
+  }
+
+  const MELDUNG = {
+    not_granted: 'Du hast Claude für diese Seite nicht freigegeben. Lade die Seite neu, um wieder gefragt zu werden.',
+    sampling_disabled: 'Claude ist für dieses Konto nicht verfügbar.',
+    rate_limited: 'Nutzungslimit erreicht. Fertige Sätze sind gespeichert – später hier weitermachen.',
+    session_expired: 'Bitte in claude.ai neu anmelden.',
+    image_rejected: 'Das Foto wurde nicht angenommen. Bitte ein anderes (JPEG oder PNG) wählen.',
+    images_unavailable: 'In dieser Ansicht gehen keine Fotos. Füge den Text stattdessen ein.',
+    refused: 'Claude hat diese Anfrage abgelehnt.',
+    invalid_json: 'Die Antwort war unvollständig.',
+    prompt_too_large: 'Zu viel Text auf einmal. Bitte weniger Einheiten.',
+    cancelled: 'Angehalten.',
+  };
+  const meldung = e => MELDUNG[e?.code] || 'Verbindungsfehler. Bitte noch einmal versuchen.';
+  const endgueltig = c => ['not_granted', 'sampling_disabled', 'rate_limited', 'session_expired', 'not_declared', 'capability_disabled', 'capability_removed'].includes(c);
+
+  async function erkennen() {
+    const roh = (api.$('ws-rohtext')?.value || '').trim();
+    if (!fotos.length && !roh) return;
+    const knopf = api.$('ws-erkennen'); if (knopf) knopf.disabled = true;
+    status('ws-s1-status', 'Claude liest den Text …');
+    const ctl = new AbortController(); laufend.add(ctl);
+    try {
+      let bilder = [], teile = 1;
+      if (fotos.length && !roh) {
+        const max = api.grenzen?.images?.maxCount || 1;
+        teile = Math.max(1, Math.min(3, Math.floor(max / fotos.length)));
+        for (const f of fotos) bilder.push(...await streifen(f, teile));
+      }
+      const opts = { modelTier: 'complex', signal: ctl.signal, onText: ({ text }) => status('ws-s1-status', `Claude schreibt … ${text.length} Zeichen`) };
+      if (bilder.length) opts.images = bilder;
+      const a = await api.sample.json(promptErkennen(teile, fotos.length, roh || ''), opts);
+      const einheiten = Array.isArray(a?.einheiten) ? a.einheiten.filter(e => e && typeof e.text === 'string' && e.text.trim()) : [];
+      if (!einheiten.length) { status('ws-s1-status', a?.hinweis || 'Kein lateinischer Text erkannt. Bitte ein schärferes Foto wählen.'); return; }
+      st = { ...leer(), autor: str(a.autor), werk: str(a.werk), stelle: str(a.stelle),
+        unsicher: Array.isArray(a.unsicher) ? a.unsicher.map(String).slice(0, 20) : [],
+        einheiten: einheiten.map((e, k) => ({ ref: str(e.ref) || String(k + 1), text: e.text.trim(), status: 'offen', satz: null, fehler: [] })), phase: 2 };
+      sichere(); zeige();
+      status('ws-s1-status', `${st.einheiten.length} Einheiten erkannt.`);
+      api.$('ws-s2')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (e) {
+      status('ws-s1-status', meldung(e));
+    } finally { laufend.delete(ctl); if (knopf) knopf.disabled = false; }
+  }
+
+  // ───────── Analyse je Einheit
+  function promptAnalyse(i, vorige) {
+    const e = st.einheiten[i];
+    const kontext = st.einheiten.map((x, k) => `${k + 1}. [${stelle(x, k)}] ${x.text}`).join('\n');
+    let p = `Du bist ein erfahrener Lateinlehrer und erstellst Lernmaterial für eine Übersetzungs-App. Sie bringt Lernenden eine feste Methode bei: Gliedern → Prädikat → Subjekt → Ergänzungen → Bezüge (KNG) → Konstruktionen → Übersetzen. Ziel: Wer die App benutzt, lernt das Vorgehen und kann es später ohne App anwenden.
+
+Werk: ${[st.autor, st.werk].filter(Boolean).join(', ') || 'unbekannt'}${st.stelle ? ' (' + st.stelle + ')' : ''}
+Die ganze Seite, damit du den Zusammenhang kennst:
+${kontext}
+
+Analysiere NUR Einheit ${i + 1} [${stelle(e, i)}]:
+${e.text}
+
+Gib genau ein JSON-Objekt zurück, aufgebaut wie dieses fertige Beispiel aus Seneca, De vita beata:
+${BEISPIEL}
+
+Feldregeln:
+- "id": "s${i + 1}", "ref": "${stelle(e, i)}".
+- "thema": ein Satz Orientierung, ohne die Übersetzung vorwegzunehmen.
+- "w": alle Tokens in Textreihenfolge. Jedes Wort genau in der Schreibung der Einheit als {"t","l","b","f","fn","r","c"}, jedes Satzzeichen als {"p": ","}. Mehrteilige Subjunktionen wie "quam diu" oder "etiam si" dürfen ein Token sein; angehängtes -que bleibt am Wort.
+- "l": Wörterbuchform ohne Längenzeichen – Verben mit allen Stammformen (Deponentien mit „(Deponens)“), Substantive mit Genitiv und Genus, Adjektive mit allen Endungen.
+- "b": deutsche Bedeutungen, die hier passende zuerst.
+- "f": Bestimmung mit den Abkürzungen des Beispiels, z. B. "3. Sg. Ind. Präs. Akt.", "Akk. Sg. f.", "Inf. Präs. Akt.", "Part. Perf. (Deponens), Nom. Pl. m.", "PPP Nom. Pl. m.", "Part. Präs. Akt. (PPA), Gen. Pl.", "Part. Fut. Akt. (PFA), Nom. Pl. m.", "Gerundium, Akk.", "Gerundivum, Nom. Sg. n.", "Adverb", "Präposition + Akk.", "Subjunktion", "Konjunktion", "Negation".
+- "fn": Funktion im Satz, kurz, mit Bezugswort. Jedes Wort, das einen Gliedsatz einleitet, enthält in "fn" die Wendung „leitet … ein“.
+- "r": P Prädikat (auch Prädikatsnomen und Teile zusammengesetzter Prädikate), S Subjekt, O Objekt/Ergänzung, A Adverbiale (auch Präpositionen), T Attribut, K Konnektor/Subjunktion, V Anrede. Relativ- und Fragewörter, die einen Gliedsatz einleiten, bekommen ihre Satzgliedrolle plus "*" ("S*", "O*", "A*").
+- "c": Nummer des Teilsatzes. "teile": für jede verwendete Nummer {"lvl": Einrücktiefe (0 = Hauptsatz), "name": wie im Beispiel ("HS", "GS 1° · Relativsatz", "PC · Partizip Perfekt"), "info": kurze Erklärung}.
+- "schritte": 5 bis 9 Lernschritte in der Reihenfolge der Methode. Zuerst "gliedern" (Typ "tippen", "ziel" = alle Einleitewörter; gibt es keinen Gliedsatz, Typ "wahl" zur Satzstruktur). Dann "verb" (Typ "tippen", "ziel" = alle finiten Verbformen, "auch" = übrige Teile zusammengesetzter Prädikate). Dann je nach Satz "subjekt", "ergaenzung", "bezug" (Typ "bezug" mit "fokus"), "konstr", "falle" (Typ "wahl"). Zuletzt immer {"ph": "uebersetzen", "typ": "text", "frage": …}.
+  Verweise in "ziel", "auch", "fokus" und die Schlüssel von "falsch" nennen ein Wort genau wie in "t"; beim zweiten Vorkommen derselben Form "wort#2".
+  "wahl": 2–3 Optionen, "ok" = Index der richtigen, "warum" so lang wie "opts", an der Stelle "ok" null, sonst kurz, warum die Option falsch ist.
+  "falsch": typische Fehlgriffe mit Begründung. "tipp": Hilfe, die die Lösung nicht verrät. "erk": Erklärung nach dem Lösen, mit übertragbarer Regel.
+  Setze die Schwerpunkte dort, wo Lernende typischerweise scheitern: mehrdeutige Endungen, Konjunktive, Konstruktionen, Pronomenbezüge, Ellipsen, getrennt Stehendes.
+- "merke": 1–3 übertragbare Regeln. "woertlich" und "gut": deine eigenen Übersetzungen ins Deutsche, nah am Satzbau bzw. in gutem Deutsch.
+Prüfe jede Form im Zusammenhang der ganzen Seite. Antworte nur mit dem JSON-Objekt.`;
+    if (vorige) {
+      p += `\n\nDeine vorige Antwort auf genau diese Aufgabe hatte formale Fehler:\n- ${vorige.fehler.join('\n- ')}\n\nVorige Antwort:\n${JSON.stringify(vorige.satz)}\n\nGib das vollständige, korrigierte JSON-Objekt zurück.`;
+    }
+    return p;
+  }
+
+  function pruefeEinheit(i, s) {
+    const e = st.einheiten[i];
+    if (!s || typeof s !== 'object' || Array.isArray(s)) return ['Antwort ist kein JSON-Objekt'];
+    s.id = 's' + (i + 1); s.ref = stelle(e, i);   // setzt die Seite selbst, nie Claudes Fehler
+    const fehler = Pruefung.pruefeSatz(s, 'Einheit ' + (i + 1));
+    if (Array.isArray(s.w)) {
+      const woerter = nurBuchstaben(s.w.filter(x => x && typeof x.t === 'string').map(x => x.t).join(''));
+      if (woerter !== nurBuchstaben(e.text)) fehler.push(`Einheit ${i + 1}: Die Wörter in "w" weichen vom Text der Einheit ab – jedes Wort genau so übernehmen, wie es im Text steht.`);
+    }
+    return fehler;
+  }
+
+  async function analysiereEinheit(i, frisch) {
+    const e = st.einheiten[i];
+    e.status = 'laeuft'; e.fehler = []; e.info = 'Claude denkt nach …'; zeigeListe();
+    const ctl = new AbortController(); laufend.add(ctl);
+    const opts = (rund) => {
+      const o = { modelTier: 'complex', signal: ctl.signal,
+        onText: ({ text }) => { e.info = `${rund ? 'korrigiert' : 'schreibt'} … ${text.length.toLocaleString('de-DE')} Zeichen`; zeigeListe(); } };
+      if (frisch || rund > 0) o.cache = false;   // „Nochmal“ und Nachbesserung sollen wirklich neu fragen
+      return o;
+    };
+    try {
+      let satz = await api.sample.json(promptAnalyse(i), opts(0));
+      let fehler = pruefeEinheit(i, satz);
+      if (fehler.length) {                       // eine gezielte Nachbesserung, nicht mehr
+        e.info = 'Formfehler gefunden, Claude bessert nach …'; zeigeListe();
+        satz = await api.sample.json(promptAnalyse(i, { fehler: fehler.slice(0, 15), satz }), opts(1));
+        fehler = pruefeEinheit(i, satz);
+      }
+      if (fehler.length) { e.status = 'fehler'; e.fehler = fehler.slice(0, 4); e.satz = null; e.roh = satz; }
+      else { e.status = 'fertig'; e.satz = satz; delete e.roh; }
+    } catch (err) {
+      e.status = err?.code === 'cancelled' ? 'offen' : 'fehler';
+      e.fehler = err?.code === 'cancelled' ? [] : [meldung(err)];
+      if (endgueltig(err?.code)) throw err;
+    } finally {
+      laufend.delete(ctl); e.info = ''; sichere(); zeigeListe();
+    }
+  }
+
+  async function analysiereAlle(nur) {
+    if (analyseLaeuft) return;
+    analyseLaeuft = true; st.phase = Math.max(st.phase, 3); sichere(); zeige();
+    const offen = st.einheiten.map((e, i) => i).filter(i => (nur ? i === nur.i : st.einheiten[i].status !== 'fertig'));
+    let abbruch = null;
+    const arbeiter = async () => {             // zwei Sätze gleichzeitig; die Plattform reiht weitere ein
+      while (offen.length && !abbruch) {
+        const i = offen.shift();
+        try { await analysiereEinheit(i, !!nur); } catch (err) { abbruch = err; }
+      }
+    };
+    await Promise.all([arbeiter(), arbeiter()]);
+    analyseLaeuft = false;
+    if (st.einheiten.length && st.einheiten.every(e => e.status === 'fertig')) st.phase = 4;
+    sichere(); zeige();
+    if (abbruch) status('ws-s4-status', meldung(abbruch));
+    else if (st.phase === 4) api.$('ws-s4')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ───────── Ergebnis
+  function textObjekt() {
+    const titel = st.werk || 'Neuer Text';
+    const slug = titel.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'text';
+    return {
+      id: `${slug}-${Date.now().toString(36)}`, autor: st.autor, titel, untertitel: st.stelle,
+      auto: true, erstellt: new Date().toISOString().slice(0, 10),
+      saetze: st.einheiten.map(e => e.satz),
+    };
+  }
+
+  // ───────── Darstellung
+  const STATUS = { offen: 'wartet', laeuft: 'läuft', fertig: 'fertig ✓', fehler: 'Fehler' };
+  function status(id, text) { const el = api.$(id); if (el) el.textContent = text; }
+  function hoehe(t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 4 + 'px'; }
+
+  function html() {
+    const esc = api.esc, foto = !!api.grenzen?.images;
+    return `<div class="ws">
+    <h2>Neue Seite</h2>
+    <p class="leise">Aus dem Foto einer Buchseite wird eine neue Seite in deiner Bibliothek: Claude liest den lateinischen Text, du prüfst ihn, Claude analysiert Satz für Satz. Das kostet Claude-Nutzung aus deinem Konto, etwa eine Chat-Nachricht je Satz.</p>
+
+    <section class="schritt" id="ws-s1">
+      <h3><span class="nr">1</span>Foto der Buchseite</h3>
+      <p class="leise">Gerade von oben, gut ausgeleuchtet, die ganze Seite im Bild. Bis zu zwei Seiten auf einmal. Übernommen wird nur der lateinische Text.</p>
+      ${foto ? `<label class="btn2 datei">Foto wählen<input type="file" id="ws-foto" accept="${esc((api.grenzen.images.mediaTypes || ['image/jpeg', 'image/png']).join(','))}" multiple></label>
+      <div class="vorschau" id="ws-vorschau"></div>` : ''}
+      <details ${foto ? '' : 'open'}><summary class="leise">${foto ? 'Ohne Foto: lateinischen Text einfügen' : 'Lateinischen Text einfügen'}</summary>
+        <textarea id="ws-rohtext" class="latein" rows="5" placeholder="Vivere, Gallio frater, omnes beate volunt …"></textarea></details>
+      <div class="knoepfe"><button class="btn" data-w="erkennen" id="ws-erkennen" disabled>Text erkennen</button><span class="leise" id="ws-s1-status"></span></div>
+    </section>
+
+    <section class="schritt zu" id="ws-s2">
+      <h3><span class="nr">2</span>Text prüfen</h3>
+      <p class="leise">Vergleiche jede Einheit Wort für Wort mit dem Buch und korrigiere Lesefehler. Trag ein, wie der Text heißen soll.</p>
+      <div class="felder nur-offen">
+        <label>Autor<input type="text" id="ws-autor" data-meta="autor"></label>
+        <label>Werk / Lektion<input type="text" id="ws-werk" data-meta="werk"></label>
+        <label>Stelle<input type="text" id="ws-stelle" data-meta="stelle"></label>
+      </div>
+      <p class="unsicher nur-offen" id="ws-unsicher" hidden></p>
+      <ol class="einheiten nur-offen" id="ws-einheiten"></ol>
+      <div class="knoepfe nur-offen"><button class="btn" data-w="analysieren" id="ws-analysieren">Analysieren</button></div>
+    </section>
+
+    <section class="schritt zu" id="ws-s3">
+      <h3><span class="nr">3</span>Analyse</h3>
+      <p class="leise">Pro Satz ein bis zwei Minuten. Fertige Sätze bleiben gespeichert, auch wenn du die App schließt.</p>
+      <ul class="liste nur-offen" id="ws-fortschritt"></ul>
+      <div class="knoepfe nur-offen">
+        <button class="btn2" data-w="stopp" id="ws-stopp" hidden>Anhalten</button>
+        <button class="btn" data-w="analysieren" id="ws-weiter" hidden>Fehlende analysieren</button>
+      </div>
+    </section>
+
+    <section class="schritt zu" id="ws-s4">
+      <h3><span class="nr">4</span>In die Bibliothek</h3>
+      <div class="ergebnis nur-offen" id="ws-ergebnis" hidden></div>
+      <div class="knoepfe nur-offen"><button class="btn" data-w="uebernehmen" id="ws-uebernehmen">Übernehmen und übersetzen</button><span class="leise" id="ws-s4-status"></span></div>
+    </section>
+
+    <div class="knoepfe"><button class="btn2" data-w="neu" id="ws-neu">Neue Seite beginnen</button><span class="leise" id="ws-neu-status"></span></div>
+    </div>`;
+  }
+
+  function zeigeEinheiten() {
+    const $ = api.$, esc = api.esc;
+    if (!$('ws-einheiten')) return;
+    for (const k of ['autor', 'werk', 'stelle']) $('ws-' + k).value = st[k];
+    $('ws-unsicher').hidden = !st.unsicher.length;
+    $('ws-unsicher').textContent = st.unsicher.length ? 'Unsicher gelesen, bitte besonders prüfen: ' + st.unsicher.join(', ') : '';
+    $('ws-einheiten').innerHTML = st.einheiten.map((e, i) => `<li class="einheit">
+        <div class="ekopf">Einheit ${i + 1} · Stelle <input type="text" data-feld="ref" data-i="${i}" value="${esc(e.ref)}" aria-label="Stelle Einheit ${i + 1}">
+          <button class="weg" data-w="weg" data-i="${i}" type="button">Entfernen</button></div>
+        <textarea class="latein" rows="3" data-feld="text" data-i="${i}" aria-label="Text Einheit ${i + 1}">${esc(e.text)}</textarea></li>`).join('');
+    $('ws-einheiten').querySelectorAll('textarea').forEach(hoehe);
+    const fertig = st.einheiten.filter(e => e.status === 'fertig').length;
+    $('ws-analysieren').textContent = fertig ? `Weiter analysieren (${st.einheiten.length - fertig} offen)` : `Analysieren (${st.einheiten.length} Sätze)`;
+  }
+
+  function zeigeListe() {
+    const $ = api.$, esc = api.esc;
+    if (!$('ws-fortschritt')) return;
+    $('ws-fortschritt').innerHTML = st.einheiten.map((e, i) => `<li>
+        <span class="snr">${i + 1}</span><span class="sanf">${esc(e.text)}</span>
+        <span class="sstat s-${e.status}">${esc(e.info || STATUS[e.status])}${e.status === 'fehler' && !analyseLaeuft ? ` <button class="btn2" data-w="nochmal" data-i="${i}" type="button">Nochmal</button>` : ''}</span>
+        ${e.fehler?.length ? `<span class="smeld">${e.fehler.map(esc).join('<br>')}</span>` : ''}</li>`).join('');
+    const offen = st.einheiten.some(e => e.status !== 'fertig');
+    $('ws-stopp').hidden = !analyseLaeuft;
+    $('ws-weiter').hidden = analyseLaeuft || !offen || st.phase < 3;
+  }
+
+  function zeigeErgebnis() {
+    const $ = api.$, esc = api.esc;
+    if (st.phase < 4 || !$('ws-ergebnis')) return;
+    const t = textObjekt(), fehler = Pruefung.pruefeText(t), groesse = JSON.stringify(t).length;
+    if (groesse > MAX_JSON) fehler.unshift('Die Seite ist zu umfangreich für ein Dokument. Entferne einige Einheiten und übernimm sie in einer zweiten Seite.');
+    $('ws-ergebnis').hidden = false;
+    $('ws-ergebnis').className = 'ergebnis ' + (fehler.length ? 'schlecht' : 'gut');
+    $('ws-ergebnis').innerHTML = fehler.length
+      ? 'Noch nicht übernehmbar:<br>' + fehler.slice(0, 5).map(esc).join('<br>')
+      : `<b>${esc(t.titel)}</b>${t.untertitel ? ', ' + esc(t.untertitel) : ''} – ${t.saetze.length} Sätze, ${(groesse / 1024).toFixed(0)} KB.`;
+    $('ws-uebernehmen').disabled = !!fehler.length;
+  }
+
+  function zeige() {
+    const $ = api.$;
+    if (!$('ws-s1')) return;
+    for (const n of [2, 3, 4]) $('ws-s' + n).classList.toggle('zu', st.phase < n);
+    if (st.phase >= 2) zeigeEinheiten();
+    if (st.phase >= 3) zeigeListe();
+    zeigeErgebnis();
+    $('ws-erkennen').disabled = !fotos.length && !($('ws-rohtext')?.value || '').trim();
+  }
+
+  function render(el) {
+    el.innerHTML = html();
+    const v = api.$('ws-vorschau');
+    if (v) for (const url of vorschau) { const img = document.createElement('img'); img.alt = 'Vorschau'; img.src = url; v.append(img); }
+    zeige();
+  }
+
+  // ───────── Ereignisse (nur innerhalb des Reiters wirksam)
+  document.addEventListener('click', e => {
+    const el = e.target.closest('[data-w]');
+    if (!el || !api) return;
+    const i = Number(el.dataset.i);
+    switch (el.dataset.w) {
+      case 'erkennen': return erkennen();
+      case 'analysieren': return analysiereAlle();
+      case 'nochmal': return analysiereAlle({ i });
+      case 'stopp': for (const c of laufend) c.abort(); return;
+      case 'weg': st.einheiten.splice(i, 1); sichere(); return zeige();
+      case 'uebernehmen': {
+        const fehler = api.uebernehmen(textObjekt());
+        if (fehler) return status('ws-s4-status', fehler);
+        st = leer(); fotos = []; vorschau.forEach(u => URL.revokeObjectURL(u)); vorschau = [];
+        return sichere();
+      }
+      case 'neu':
+        if (el.dataset.sicher !== '1') {
+          el.dataset.sicher = '1'; el.textContent = 'Wirklich alles verwerfen?';
+          return status('ws-neu-status', 'Erneut tippen zum Bestätigen.');
+        }
+        st = leer(); fotos = []; vorschau.forEach(u => URL.revokeObjectURL(u)); vorschau = [];
+        sichere(); render(el.closest('.ws').parentElement); return window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  });
+  document.addEventListener('change', e => {
+    if (e.target.id !== 'ws-foto' || !api) return;
+    fotos = [...e.target.files].slice(0, 2);
+    vorschau.forEach(u => URL.revokeObjectURL(u));
+    vorschau = fotos.map(f => URL.createObjectURL(f));
+    const v = api.$('ws-vorschau'); v.innerHTML = '';
+    for (const url of vorschau) { const img = document.createElement('img'); img.alt = 'Vorschau'; img.src = url; v.append(img); }
+    zeige();
+  });
+  document.addEventListener('input', e => {
+    if (!api || !e.target.closest('.ws')) return;
+    if (e.target.id === 'ws-rohtext') return zeige();
+    if (e.target.dataset.meta) { st[e.target.dataset.meta] = e.target.value; return sichere(); }
+    const i = Number(e.target.dataset.i), feld = e.target.dataset.feld;
+    if (!feld || !st.einheiten[i]) return;
+    st.einheiten[i][feld] = e.target.value;
+    st.einheiten[i].status = 'offen'; st.einheiten[i].satz = null; delete st.einheiten[i].roh;   // geänderter Text → neu analysieren
+    if (feld === 'text') hoehe(e.target);
+    if (st.phase > 2) st.phase = 3;
+    sichere();
+  });
+
+  function init(a) {
+    api = a;
+    st = Object.assign(leer(), api.laden() || {});
+    // Ein unterbrochener Lauf gilt als wartend; aufgehobene Antworten nach einer Korrektur der Prüfung neu prüfen
+    st.einheiten.forEach((e, i) => {
+      if (e.status === 'laeuft') e.status = 'offen';
+      if (e.status === 'fehler' && e.roh && !pruefeEinheit(i, e.roh).length) { e.status = 'fertig'; e.satz = e.roh; e.fehler = []; delete e.roh; }
+    });
+    if (st.einheiten.length && st.einheiten.every(e => e.status === 'fertig')) st.phase = 4;
+  }
+
+  return { init, render, laeuft: () => analyseLaeuft };
+})();
+
+'use strict';
+/* Übersetzungshilfe Seneca – Logik. Daten: daten.js (TEXTE, eingebaut) und eigene Seiten.
+   Läuft an zwei Orten: als Artefakt in claude.ai (Stand im Konto, neue Seiten per Foto über werkstatt.js)
+   und als Web-App auf GitHub Pages (Stand im Gerät, neue Seiten nur per Einfügen). */
+
+// Die Fassung in claude.ai – von der Pages-Fassung aus verlinkt
+const ARTEFAKT = 'https://claude.ai/artifact/EM8QYEVRPWn95FFsMkh4tx';
+
+const ROLLEN = { P: 'Prädikat', S: 'Subjekt', O: 'Objekt / Ergänzung', A: 'Adverbiale', T: 'Attribut', K: 'Konnektor / Einleitewort', V: 'Anrede' };
+const LEGENDE = { P: 'Prädikat', S: 'Subjekt', O: 'Objekt', A: 'Adverbiale', T: 'Attribut', K: 'Konnektor', V: 'Anrede' };
+const PHASEN = {
+  gliedern: '1 · Gliedern', verb: '2 · Prädikat', subjekt: '3 · Subjekt', ergaenzung: '4 · Ergänzungen',
+  bezug: '5 · Bezüge', konstr: '6 · Konstruktion', falle: 'Falle!', uebersetzen: '7 · Übersetzen',
+};
+// Welche Satzglied-Farben nach einem gelösten Schritt sichtbar werden
+const PHASE_ROLLEN = { gliedern: ['K'], verb: ['P'], subjekt: ['S'], ergaenzung: ['O'], bezug: ['T'] };
+
+const CHECKLISTE = [
+  ['Gliedern', 'Satzzeichen, Subjunktionen, Relativ- und Fragewörter: Wo beginnen Gliedsätze?'],
+  ['Prädikate', 'Alle finiten Verben finden. Eins je Teilsatz – sonst Ellipse?'],
+  ['Bestimmen', 'Person, Numerus, Tempus, Modus, Genus verbi. Konjunktiv → warum?'],
+  ['Subjekt', 'Nominativ im passenden Numerus – oder steckt es in der Endung?'],
+  ['Ergänzungen', 'Was verlangt das Verb? Akkusativ, Dativ, Infinitiv, Richtung?'],
+  ['Bezüge', 'KNG: Was gehört zusammen? Pronomen → Bezugswort?'],
+  ['Konstruktionen', 'nd-Formen, Partizipien, AcI, indirekte Frage, Signalwörter?'],
+  ['Übersetzen', 'Vom Hauptsatz aus. Erst wörtlich, dann gutes Deutsch. Jedes Wort untergebracht?'],
+];
+
+const KONTROLLE = [
+  'Jedes Prädikat übersetzt – mit richtigem Tempus und Modus?',
+  'Jedes lateinische Wort ist in deiner Übersetzung vertreten?',
+  'Bezüge stimmen (KNG, Pronomen)?',
+  'Konstruktionen aufgelöst (Partizipien, nd-Formen, indirekte Fragen)?',
+  'Ergibt der Satz im Zusammenhang Sinn?',
+];
+
+// ───────────────────────────── Texte: eingebaute und importierte
+const finde = Pruefung.finde;
+function bereite(text) {
+  if (text._bereit) return;
+  text._bereit = true;
+  for (const s of text.saetze) {
+    for (const wd of s.w) {
+      if (wd.p) continue;
+      wd.rolle = wd.r[0];
+      wd.einl = Pruefung.istEinleitewort(wd);
+    }
+    for (const st of s.schritte) {
+      st._ziel = (st.ziel || []).map(r => finde(s, r));
+      st._auch = (st.auch || []).map(r => finde(s, r));
+      st._falsch = new Map(Object.entries(st.falsch || {}).map(([r, t]) => [finde(s, r), t]));
+      st._fokus = st.fokus ? finde(s, st.fokus) : -1;
+    }
+  }
+}
+
+// ───────────────────────────── Speicher: Konto (claude.ai) oder Gerät (localStorage)
+// Dokumente: stand (Fortschritt), vokabeln, werkstatt (angefangene Seite), texte/<id> (eigene Seiten als JSON-Text).
+// Im Konto liegt alles unter data/users/<id>/ – privat, auf jedem Gerät gleich. Auf dem Gerät unter seneca.*.
+const use = n => (window.claude && typeof window.claude.use === 'function' ? window.claude.use(n) : Promise.resolve(null));
+const klon = x => (x == null ? x : JSON.parse(JSON.stringify(x)));
+let db = null, uid = null, sample = null, grenzen = null, geladen = false;
+
+const Lager = {
+  art: 'geraet',
+  letzt: {}, kette: {},
+  ref(name) { return db.doc(`data/users/${uid}/${name}`); },
+  texte() { return db.collection(`data/users/${uid}/bibliothek/texte`); },
+  async lies(name) {
+    if (this.art === 'konto') {
+      const snap = await this.ref(name).get();
+      const d = snap.exists ? klon(snap.data()) : null;
+      this.letzt[name] = d ? JSON.stringify(d) : null;
+      return d;
+    }
+    try { return JSON.parse(localStorage.getItem('seneca.' + name)); } catch (_) { return null; }
+  },
+  // Schreibt nur bei Änderung, je Dokument einen Vorgang nach dem anderen
+  schreib(name, obj) {
+    const json = JSON.stringify(obj);
+    if (json === this.letzt[name]) return;
+    this.letzt[name] = json;
+    if (this.art !== 'konto') { try { localStorage.setItem('seneca.' + name, json); } catch (_) { melde('Der Speicher auf diesem Gerät ist voll.'); } return; }
+    const daten = JSON.parse(json);
+    this.kette[name] = (this.kette[name] || Promise.resolve())
+      .then(() => this.ref(name).set(daten))
+      .catch(e => this.ref(name).set(daten).catch(e2 => melde(e2?.code === 'quota_exceeded' ? 'Dein Speicher in claude.ai ist voll – entferne einen älteren Text.' : 'Speichern im Konto fehlgeschlagen.')));
+  },
+  async ladeTexte() {
+    if (this.art === 'konto') {
+      const q = await this.texte().get();
+      return q.docs.map(d => d.data().json).filter(x => typeof x === 'string');
+    }
+    try { return JSON.parse(localStorage.getItem('seneca.importe')) || []; } catch (_) { return []; }
+  },
+  async speichereText(id, json, alle) {
+    if (this.art === 'konto') return this.texte().doc(id).set({ id, json });
+    try { localStorage.setItem('seneca.importe', JSON.stringify(alle)); }
+    catch (_) { throw new Error('voll'); }
+  },
+  loescheText(id, alle) {
+    if (this.art === 'konto') return this.texte().doc(id).delete().catch(() => {});
+    try { localStorage.setItem('seneca.importe', JSON.stringify(alle)); } catch (_) {}
+  },
+};
+
+let importRoh = [];               // eigene Seiten als JSON-Zeichenketten (ohne Laufzeitfelder)
+const ALLE = [...TEXTE];
+ALLE.forEach(bereite);
+let TEXT = null, SAETZE = [];
+
+// ───────────────────────────── Zustand
+function neuerStand() {
+  return { text: null, pos: {}, satz: 0, tab: 'text', modus: {}, fort: {}, ueb: {}, haken: {}, vok: {}, alle: {} };
+}
+let stand = neuerStand();
+
+function waehleText(id) {
+  if (TEXT) stand.pos[TEXT.id] = stand.satz;
+  TEXT = ALLE.find(t => t.id === id) || ALLE[0];
+  SAETZE = TEXT.saetze;
+  stand.text = TEXT.id;
+  stand.satz = stand.pos[TEXT.id] ?? 0;
+  if (!(stand.satz >= 0 && stand.satz < SAETZE.length)) stand.satz = 0;
+}
+
+let speicherTimer = null;
+function speichere() { clearTimeout(speicherTimer); speicherTimer = setTimeout(speichereAlles, Lager.art === 'konto' ? 800 : 250); }
+function speichereAlles() {
+  clearTimeout(speicherTimer);
+  if (!geladen) return;
+  const { vok, ...rest } = stand;
+  Lager.schreib('stand', rest);
+  Lager.schreib('vokabeln', { vok });
+  if (werkstattTimer) { clearTimeout(werkstattTimer); werkstattTimer = null; Lager.schreib('werkstatt', werkstattStand); }
+}
+let werkstattTimer = null, werkstattStand = null;
+function speichereWerkstatt(st) {
+  werkstattStand = st;
+  clearTimeout(werkstattTimer);
+  werkstattTimer = setTimeout(() => { werkstattTimer = null; Lager.schreib('werkstatt', werkstattStand); }, 600);
+}
+
+// Flüchtiger Zustand des gerade bearbeiteten Schritts
+let sitzung;
+function neueSitzung() {
+  sitzung = {
+    auswahl: new Set(), ergebnis: null, rueck: '', tipp: false, versuche: 0,
+    wahlFalsch: new Set(), nachschlagen: false, zeigeW: false, zeigeG: false,
+    satzbildOffen: sitzung ? sitzung.satzbildOffen : null, aufgedeckt: sitzung ? sitzung.aufgedeckt : new Set(),
+  };
+}
+neueSitzung();
+let abfrage = null;   // Vokabelabfrage
+
+const satz = () => SAETZE[stand.satz];
+const fort = () => (stand.fort[satz().id] ||= { akt: 0, g: {} });
+const schritt = () => satz().schritte[fort().akt];
+const modus = () => stand.modus[satz().id] || 'gefuehrt';
+
+function sichtbareRollen() {
+  const s = satz(), f = fort();
+  if (f.fertig || stand.alle[s.id]) return new Set(Object.keys(ROLLEN));
+  const r = new Set();
+  s.schritte.forEach((st, k) => { if (f.g[k]) (PHASE_ROLLEN[st.ph] || []).forEach(x => r.add(x)); });
+  return r;
+}
+function gegliedert() {
+  const s = satz(), f = fort();
+  return f.fertig || s.schritte.some((st, k) => st.ph === 'gliedern' && f.g[k]);
+}
+
+// ───────────────────────────── Hilfen
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const $ = id => document.getElementById(id);
+const lemmaKey = wd => wd.l.split(/[ ,(]/)[0].toLowerCase();
+
+function wortKlassen(s, i, rollen, imText) {
+  const wd = s.w[i], k = ['wort'];
+  if (rollen.has(wd.rolle)) k.push('r-' + wd.rolle);
+  if (rollen.has('K') && wd.einl) k.push('e');
+  if (imText && modus() === 'gefuehrt') {
+    const st = schritt(), geloest = fort().g[fort().akt];
+    if (st.typ === 'tippen' || st.typ === 'bezug') {
+      if (geloest) {
+        if (st._ziel.includes(i)) k.push('ok');
+      } else {
+        if (sitzung.auswahl.has(i)) k.push('sel');
+        if (sitzung.ergebnis?.ok.has(i)) k.push('ok');
+        if (sitzung.ergebnis?.bad.has(i)) k.push('bad');
+      }
+      if (st._fokus === i) k.push('fokus');
+    }
+  }
+  return k.join(' ');
+}
+
+function woerterHtml(s, von, bis, rollen, imText) {
+  let h = '';
+  for (let i = von; i < bis; i++) {
+    const wd = s.w[i];
+    if (wd.p) continue;
+    // Satzzeichen hängen am Wort davor, damit kein Zeilenumbruch dazwischen fällt
+    let pz = '', j = i;
+    while (j + 1 < bis && s.w[j + 1].p) pz += `<span class="pz">${esc(s.w[++j].p)}</span>`;
+    h += (h ? ' ' : '') + `<span class="wg"><span class="${wortKlassen(s, i, rollen, imText)}" data-i="${i}">${esc(wd.t)}</span>${pz}</span>`;
+    i = j;
+  }
+  return h;
+}
+
+// ───────────────────────────── Darstellung: Übersetzen
+function renderText() {
+  const s = satz(), f = fort(), n = SAETZE.length, rollen = sichtbareRollen();
+  let h = `<section class="navi">
+    <button class="pfeil" data-act="zurueck" ${stand.satz === 0 ? 'disabled' : ''} aria-label="Voriger Satz">‹</button>
+    <button class="mitte" data-act="uebersicht"><b>Satz ${stand.satz + 1}</b> von ${n} <small>· § ${esc(s.ref)}${f.fertig ? ' · ✓' : ''}</small></button>
+    <button class="pfeil" data-act="vor" ${stand.satz === n - 1 ? 'disabled' : ''} aria-label="Nächster Satz">›</button>
+  </section>
+  <div class="modus">
+    <button data-act="modus" data-m="gefuehrt" class="${modus() === 'gefuehrt' ? 'an' : ''}">Geführt</button>
+    <button data-act="modus" data-m="selbst" class="${modus() === 'selbst' ? 'an' : ''}">Selbstständig</button>
+  </div>
+  <p class="thema"><b>Worum geht’s:</b> ${esc(s.thema)}</p>`;
+  if (TEXT.auto) h += '<p class="auto">Automatisch erstellt – niemand hat diese Analysen von Hand geprüft. Kommt dir etwas falsch vor, prüf es im Wörterbuch.</p>';
+
+  if (stand.satz > 0) {
+    const v = SAETZE[stand.satz - 1].w;
+    const rest = v.slice(-7).map(x => x.p ? x.p : ' ' + x.t).join('').trim();
+    h += `<div class="kontext">… ${esc(rest)}</div>`;
+  }
+  h += `<div class="latein" id="latein">${woerterHtml(s, 0, s.w.length, rollen, true)}</div>`;
+
+  if (rollen.size) {
+    h += '<div class="legende">' + Object.keys(LEGENDE).filter(r => rollen.has(r))
+      .map(r => `<span class="leg-${r}">${LEGENDE[r]}</span>`).join('') +
+      (rollen.has('K') ? '<span class="l-e leg-K">Einleitewort</span>' : '') + '</div>';
+  }
+
+  // Aufgabe direkt unter den Text: Antippen und Prüfen ohne Scrollen; das Satzbild ist Nachschlagewerk
+  h += modus() === 'selbst' ? renderCheckliste() : renderKarte();
+  h += renderSatzbild(s, rollen);
+  $('haupt').innerHTML = h;
+}
+
+function renderSatzbild(s, rollen) {
+  const frei = gegliedert() || sitzung.satzbildOffen;
+  if (!frei) {
+    return `<details class="satzbild"><summary>Satzbild</summary>
+      <div class="gesperrt">Das Satzbild zeigt Haupt- und Gliedsätze eingerückt. Es erscheint, sobald du den Satz gegliedert hast.
+      <div class="knoepfe" style="margin-top:8px"><button class="btn2" data-act="satzbild-frei">Trotzdem zeigen</button></div></div></details>`;
+  }
+  const zeilen = [], gesehen = new Set();
+  let akt = null;
+  s.w.forEach((wd, i) => {
+    if (wd.p) return;
+    if (!akt || akt.c !== wd.c) { akt = { c: wd.c, von: i, bis: i + 1, neu: !gesehen.has(wd.c) }; gesehen.add(wd.c); zeilen.push(akt); }
+    akt.bis = i + 1;
+    while (akt.bis < s.w.length && s.w[akt.bis].p) akt.bis++;
+  });
+  const offen = sitzung.satzbildOffen !== false;
+  return `<details class="satzbild" ${offen ? 'open' : ''}><summary>Satzbild</summary><div class="zeilen">` +
+    zeilen.map(z => {
+      const t = s.teile[z.c];
+      return `<div class="zeile" data-lvl="${t.lvl}" style="--lvl:${t.lvl}">
+        <div class="ztag">${z.neu ? esc(t.name) : '↳ Fortsetzung ' + esc(t.name)}</div>
+        <div class="zwoerter">${woerterHtml(s, z.von, z.bis, rollen, false)}</div>
+        ${z.neu && t.info ? `<div class="zinfo">${esc(t.info)}</div>` : ''}</div>`;
+    }).join('') + '</div></details>';
+}
+
+function renderKarte() {
+  const s = satz(), f = fort(), k = f.akt, st = s.schritte[k], status = f.g[k], n = s.schritte.length;
+  let h = `<div class="karte" id="karte"><div class="kkopf"><span class="phase ph-${st.ph}">${PHASEN[st.ph]}</span><span class="zaehler">Schritt ${k + 1} von ${n}</span></div>
+    <p class="frage">${esc(st.frage)}</p>`;
+
+  if ((st.typ === 'tippen' || st.typ === 'bezug') && !status) {
+    h += `<div class="antippen">Wort antippen =
+      <button data-act="nachschlagen" data-v="0" class="${sitzung.nachschlagen ? '' : 'an'}">auswählen</button>
+      <button data-act="nachschlagen" data-v="1" class="${sitzung.nachschlagen ? 'an' : ''}">nachschlagen</button></div>`;
+  }
+  if (st.typ === 'wahl') {
+    h += '<div class="optionen">' + st.opts.map((o, i) => {
+      const falsch = sitzung.wahlFalsch.has(i), richtig = status && i === st.ok;
+      const warum = falsch && st.warum?.[i] ? `<span class="warum">${esc(st.warum[i])}</span>` : '';
+      return `<button class="option ${falsch ? 'falsch' : ''} ${richtig ? 'richtig' : ''}" data-act="wahl" data-o="${i}" ${status ? 'disabled' : ''}>${falsch ? '✗ ' : richtig ? '✓ ' : ''}${esc(o)}${warum}</button>`;
+    }).join('') + '</div>';
+  }
+  if (st.typ === 'text') return h + renderUebersetzung() + punkteHtml() + '</div>';
+
+  if (sitzung.tipp && st.tipp && !status) h += `<div class="tipp">Tipp: ${esc(st.tipp)}</div>`;
+  if (sitzung.rueck && !status) h += `<div class="rueck">${sitzung.rueck}</div>`;
+  if (status) {
+    const titel = status === 'ok' ? 'Richtig – auf Anhieb.' : status === 'fehler' ? 'Richtig.' : 'Die Lösung:';
+    h += `<div class="lehrer"><div class="ltitel">${titel}</div>${esc(st.erk)}</div>`;
+  }
+
+  h += '<div class="knoepfe">';
+  if (!status) {
+    if (st.tipp) h += `<button class="btn2" data-act="tipp" ${sitzung.tipp ? 'disabled' : ''}>Tipp</button>`;
+    if (st.typ !== 'wahl') h += '<button class="btn" data-act="pruefen">Prüfen</button>';
+    h += '<button class="btn2" data-act="loesung">Lösung zeigen</button>';
+  } else {
+    h += '<button class="btn rechts" data-act="weiter">Weiter →</button>';
+  }
+  return h + '</div>' + punkteHtml() + '</div>';
+}
+
+function punkteHtml() {
+  const s = satz(), f = fort();
+  const erster = s.schritte.findIndex((_, k) => !f.g[k]);
+  return '<div class="punkte">' + s.schritte.map((st, k) => {
+    const g = f.g[k], erlaubt = g || k === erster || f.fertig;
+    return `<button class="punkt ${g || ''} ${k === f.akt ? 'akt' : ''}" data-act="gehe" data-k="${k}" ${erlaubt ? '' : 'disabled'} aria-label="Schritt ${k + 1}">${k + 1}</button>`;
+  }).join('') + '</div>';
+}
+
+function renderUebersetzung() {
+  const s = satz(), f = fort();
+  let h = `<textarea id="ueb" placeholder="Deine Übersetzung …" autocomplete="off" autocapitalize="sentences">${esc(stand.ueb[s.id] || '')}</textarea>
+    <details class="kontrolle"><summary>Selbstkontrolle vor dem Vergleich</summary><ul>${KONTROLLE.map(t => `<li>${esc(t)}</li>`).join('')}</ul></details>
+    <div class="knoepfe">
+      <button class="btn2" data-act="zeige-w">${sitzung.zeigeW ? 'Wörtlich ✓' : 'Wörtliche Fassung'}</button>
+      <button class="btn2" data-act="zeige-g">${sitzung.zeigeG ? 'Gutes Deutsch ✓' : 'Gutes Deutsch'}</button>
+    </div>`;
+  if (sitzung.zeigeW || f.fertig) h += `<div class="loesung"><div class="wlabel">Wörtlich</div>${esc(s.woertlich)}</div>`;
+  if (sitzung.zeigeG || f.fertig) h += `<div class="loesung"><div class="wlabel">Gutes Deutsch</div>${esc(s.gut)}</div>`;
+
+  if (!f.fertig) {
+    h += '<div class="knoepfe" style="margin-top:10px"><button class="btn voll" data-act="fertig">Satz abschließen ✓</button></div>';
+  } else {
+    h += `<div class="merke"><div class="ltitel">Das nimmst du mit</div><ul>${s.merke.map(m => `<li>${esc(m)}</li>`).join('')}</ul></div>`;
+    if (modus() === 'gefuehrt') {
+      const aufg = s.schritte.filter(st => st.typ !== 'text').length;
+      const anhieb = s.schritte.filter((st, k) => st.typ !== 'text' && f.g[k] === 'ok').length;
+      h += `<p class="bilanz">${anhieb} von ${aufg} Schritten auf Anhieb gelöst. Die Farben im Text zeigen jetzt alle Satzglieder.</p>`;
+    }
+    if (stand.satz < SAETZE.length - 1) h += '<div class="knoepfe"><button class="btn voll" data-act="vor">Nächster Satz →</button></div>';
+    else h += '<p class="bilanz">Das war der letzte Satz dieses Abschnitts. Deine Gesamtübersetzung findest du in der Übersicht (Mitte oben).</p>';
+  }
+  return h;
+}
+
+function renderCheckliste() {
+  const s = satz(), haken = stand.haken[s.id] || [];
+  return `<div class="karte" id="karte"><div class="kkopf"><span class="phase ph-selbst">Selbstständig</span><span class="zaehler">${haken.filter(Boolean).length} / ${CHECKLISTE.length}</span></div>
+    <p class="frage">Arbeite die Schritte ab wie bei einem Text ohne App. Wörter antippen = nachschlagen.</p>
+    <ol class="haken">${CHECKLISTE.map(([t, d], i) => `<li><label><input type="checkbox" data-act="haken" data-k="${i}" ${haken[i] ? 'checked' : ''}><span><b>${i + 1}. ${t}</b><small>${esc(d)}</small></span></label></li>`).join('')}</ol>
+    <div class="knoepfe" style="margin-bottom:12px">
+      <button class="btn2" data-act="alle">${stand.alle[s.id] ? 'Farben aus' : 'Satzglieder färben'}</button>
+    </div>
+    ${renderUebersetzung()}</div>`;
+}
+
+// ───────────────────────────── Darstellung: Methode
+function renderMethode() {
+  const gesammelt = ALLE.flatMap(t => t.saetze.filter(s => stand.fort[s.id]?.fertig)
+    .map(s => ({ s, wo: (ALLE.length > 1 ? t.titel + ', ' : '') + 'Satz ' + (t.saetze.indexOf(s) + 1) })));
+  $('haupt').innerHTML = `
+  <h2>Die Methode</h2>
+  <p>Von links nach rechts Wort für Wort zu raten, scheitert an jedem langen Satz. Gute Übersetzer gehen immer in derselben Reihenfolge vor – so lange, bis es automatisch läuft. Genau diese Reihenfolge übt die App mit dir.</p>
+  <ol class="schrittliste">
+    <li><b>0 · Lesen</b>Den ganzen Satz lesen, am besten laut. Was weißt du schon aus dem Zusammenhang? Satzzeichen beachten.</li>
+    <li><b>1 · Gliedern</b>Einleitewörter suchen: Subjunktionen (ut, cum, si, quod, quia, quoniam, ubi, dum, ne …), Relativpronomen (qui, quae, quod …), Fragewörter (quis, quid, quo, qua, quantus …). Jedes eröffnet einen Gliedsatz.<div class="pf">Ergebnis: das Satzbild – Hauptsatz links, Gliedsätze eingerückt.</div></li>
+    <li><b>2 · Prädikat</b>Alle finiten Verben (mit Personalendung) suchen und bestimmen: Person, Numerus, Tempus, Modus, Genus verbi.<div class="pf">Prüffrage: Je Teilsatz ein Prädikat? Wenn nicht → Ellipse. Konjunktiv → sofort fragen: warum?</div></li>
+    <li><b>3 · Subjekt</b>Ein Nominativ, der im Numerus zum Prädikat passt. Keiner da → es steckt in der Endung (wir, sie …).<div class="pf">Vorsicht: Anrede (Vokativ), Prädikatsnomen, Neutrum Plural auf -a.</div></li>
+    <li><b>4 · Ergänzungen</b>Was verlangt das Verb? Akkusativ (wen/was), Dativ (wem), Infinitiv, Richtung. Das Wörterbuch zeigt die Konstruktion.</li>
+    <li><b>5 · Bezüge</b>Adjektive, Pronomen und Partizipien suchen ihr Bezugswort: gleicher Kasus, Numerus, Genus (KNG) – nicht unbedingt gleiche Endung.<div class="pf">Getrennt Stehendes (Hyperbaton) zusammenführen. Jedes Pronomen auf sein Bezugswort zurückführen.</div></li>
+    <li><b>6 · Konstruktionen</b>Partizipien (PC, Ablativus absolutus), AcI, nd-Formen, indirekte Fragen, Relativsätze, Litotes, Ellipsen – die Signale stehen in der Tabelle unten.</li>
+    <li><b>7 · Übersetzen</b>Vom Hauptsatz aus, Gliedsatz für Gliedsatz. Erst wörtlich (alles untergebracht?), dann gutes Deutsch.<div class="pf">Kontrolle: Jedes Wort vertreten? Jede Form richtig? Sinn im Zusammenhang?</div></li>
+  </ol>
+
+  <h3>Signale und was sie bedeuten</h3>
+  <table class="tabelle"><thead><tr><th>Signal</th><th>Bedeutung → Übersetzung</th></tr></thead><tbody>
+    <tr><td>Name zwischen zwei Kommas</td><td>Anrede (Vokativ)</td></tr>
+    <tr><td>qu-Wort + Konj. nach Verb des Wissens, Fragens, Sehens</td><td>indirekte Frage → deutsch Indikativ</td></tr>
+    <tr><td>adeo / ita / tam / sic / tantus / talis … ut + Konj.</td><td>Konsekutivsatz → „so …, dass“</td></tr>
+    <tr><td>ut / ne + Konj. ohne „so“-Wort</td><td>Final- oder Begehrsatz → „damit“, „dass“, „damit nicht“</td></tr>
+    <tr><td>ut / ubi + Indikativ</td><td>„wie“ / „sobald, wenn“</td></tr>
+    <tr><td>eo … quo + Komparativ</td><td>„um so …, je …“</td></tr>
+    <tr><td>nd-Form + esse</td><td>Notwendigkeit → „muss … werden“, „man muss“</td></tr>
+    <tr><td>ad + nd-Form (Akk.)</td><td>Zweck → „zum …“, „um zu“</td></tr>
+    <tr><td>-urus, -ura, -urum</td><td>Partizip Futur → „im Begriff zu“, „werden“</td></tr>
+    <tr><td>-ns, -ntis</td><td>Partizip Präsens → gleichzeitig: „während“, „indem“, „einer, der …“</td></tr>
+    <tr><td>Partizip + Nomen im Ablativ, von keinem Verb verlangt</td><td>Ablativus absolutus → „nachdem / während / weil …“</td></tr>
+    <tr><td>Akkusativ + Infinitiv nach Verb des Sagens, Denkens, Wahrnehmens</td><td>AcI → „dass“-Satz</td></tr>
+    <tr><td>Relativpronomen am Satzanfang</td><td>relativer Satzanschluss → „dieser“</td></tr>
+    <tr><td>Konjunktiv im Hauptsatz, ohne Einleitewort</td><td>Aufforderung oder Wunsch → „soll“, „lasst uns“, „möge“</td></tr>
+    <tr><td>Wörterbuch: 1. Person auf -or</td><td>Deponens → aktiv übersetzen, auch das Partizip Perfekt</td></tr>
+    <tr><td>-e- in der 3./4. Konjugation (1. Sg. -am)</td><td>Futur I → „wird …“</td></tr>
+    <tr><td>Superlativ + quisque</td><td>„gerade die …-sten“</td></tr>
+    <tr><td>non sine, non nemo, haud …</td><td>Litotes → betont bejahend</td></tr>
+    <tr><td>Zeitangabe im Akkusativ ohne Präposition</td><td>Zeitdauer → „… lang“</td></tr>
+    <tr><td>esse, fieri, videri</td><td>Kopula → Prädikatsnomen suchen</td></tr>
+  </tbody></table>
+
+  <h3>Typische Fallen</h3>
+  <ul class="fallen">
+    <li><b>-a</b>: Nom. Sg. f. – Abl. Sg. f. – Nom./Akk. Pl. n. (via, ea, diversa). Die Kongruenz entscheidet.</li>
+    <li><b>-is</b>: Gen. Sg. der 3. Dekl. – Dat./Abl. Pl. – Nom. Sg. (brevis, naturalis).</li>
+    <li><b>-e</b>: Adverb – Abl. Sg. – Neutrum Sg. (beate, facile).</li>
+    <li><b>hic, illo, eo, quo</b>: Pronomen oder Adverb? Gibt es ein Bezugswort? Keins → Adverb.</li>
+    <li><b>causa</b>: Substantiv („Ursache“) oder nachgestellt „wegen“? Braucht ein Kopulaverb ein Prädikatsnomen?</li>
+    <li><b>incola, nauta, agricola, poeta</b>: a-Deklination, aber maskulin.</li>
+    <li><b>-etur</b>: in der 2. Konjugation Präsens (videtur), in der 3./4. Futur (conteretur).</li>
+    <li><b>Vorsilben</b>: adp → app, inp → imp – im Wörterbuch beide Schreibungen prüfen.</li>
+  </ul>
+
+  <h3>So lernst du es</h3>
+  <ol>
+    <li><b>Geführt:</b> Jeder Satz in Schritten, mit Rückmeldung. Erst selbst versuchen, Tipps sparsam nutzen. Ziel: möglichst viele Schritte auf Anhieb.</li>
+    <li><b>Selbstständig:</b> Nur noch die Checkliste. Die App hilft beim Nachschlagen und zeigt am Ende die Lösung.</li>
+    <li><b>Ohne App:</b> Buch, Bleistift, Checkliste daneben. Prädikate unterstreichen, Einleitewörter einkreisen, Gliedsätze einklammern.</li>
+    <li><b>Vokabeln:</b> Alles, was du nachschlägst, landet unter „Vokabeln“. Genau das ist dein Lernbedarf – täglich fünf Minuten abfragen.</li>
+  </ol>
+
+  <h3>Deine Merksätze</h3>
+  ${gesammelt.length ? '<ul>' + gesammelt.flatMap(({ s, wo }) => s.merke.map(m => `<li>${esc(m)} <span class="leise">(${esc(wo)})</span></li>`)).join('') + '</ul>'
+    : '<p class="leise">Sobald du einen Satz abschließt, sammeln sich hier seine Merksätze.</p>'}
+
+  <p class="hinweis">Analysen und Übersetzungen wurden mit Claude erstellt. Wenn dir eine Analyse falsch vorkommt: Wörterbuch und Grammatik gegenprüfen und Bescheid geben.</p>`;
+}
+
+// ───────────────────────────── Darstellung: Vokabeln
+function renderVokabeln() {
+  const eintraege = Object.entries(stand.vok).sort((a, b) => a[1].zeit - b[1].zeit);
+  if (abfrage) return renderAbfrage();
+  $('haupt').innerHTML = `<h2>Meine Vokabeln</h2>
+    <p class="leise">Jedes Wort, das du im Text nachschlägst, landet hier. Was du dreimal gewusst hast, bekommt einen Haken.</p>
+    ${eintraege.length ? `<div class="knoepfe" style="margin:10px 0"><button class="btn voll" data-act="abfrage">Abfragen (${eintraege.length})</button></div>` : ''}
+    ${eintraege.length ? eintraege.map(([key, v]) => `<div class="vzeile"><div class="vtext">
+        <div class="vlemma">${esc(v.l)}</div><div>${esc(v.b)}</div>
+        <div class="vmeta">im Text: ${esc(v.form)} · ${v.werk ? esc(v.werk) + ', ' : ''}Satz ${v.satz}${v.gewusst >= 3 ? ' · <span class="sitzt">sitzt ✓</span>' : v.gewusst ? ` · ${v.gewusst}× gewusst` : ''}</div></div>
+        <button class="vweg" data-act="vok-weg" data-key="${esc(key)}" aria-label="Entfernen">✕</button></div>`).join('')
+      : '<p>Noch leer. Tippe im Text auf ein Wort, um es nachzuschlagen.</p>'}`;
+}
+
+function renderAbfrage() {
+  const key = abfrage.reihe[0];
+  if (!key) {
+    $('haupt').innerHTML = `<div class="karte abfrage"><div class="afrage">Fertig</div>
+      <p>${abfrage.gewusst} gewusst, ${abfrage.nochmal} wiederholt.</p>
+      <div class="knoepfe"><button class="btn" data-act="abfrage-ende">Zur Liste</button></div></div>`;
+    return;
+  }
+  const v = stand.vok[key];
+  $('haupt').innerHTML = `<div class="karte abfrage">
+    <div class="leise">Noch ${abfrage.reihe.length}</div>
+    <div class="afrage">${esc(v.l.split(',')[0])}</div>
+    <div class="aform">im Text: ${esc(v.form)}</div>
+    ${abfrage.zeigen ? `<div class="aantwort"><div class="wlemma">${esc(v.l)}</div><div>${esc(v.b)}</div></div>
+      <div class="knoepfe"><button class="btn2" data-act="abfrage-nochmal">Nochmal ↺</button><button class="btn" data-act="abfrage-gewusst">Gewusst ✓</button></div>`
+      : '<div class="knoepfe"><button class="btn" data-act="abfrage-zeigen">Aufdecken</button></div>'}
+    <div class="knoepfe" style="margin-top:16px"><button class="btn2" data-act="abfrage-ende">Beenden</button></div></div>`;
+}
+
+function renderNeu() {
+  if (sample) return Werkstatt.render($('haupt'));
+  // Ohne Claude (GitHub Pages): auf die Fassung in claude.ai verweisen, Einfügen bleibt als Weg
+  $('haupt').innerHTML = `<h2>Neue Seite</h2>
+    <p>Fotos von Buchseiten analysiert die App nur in claude.ai – dort gehört Claude zur App. <a href="${ARTEFAKT}" target="_blank" rel="noopener">Seneca übersetzen in claude.ai öffnen</a></p>
+    <div class="karte nurpages"><h3 style="margin-top:0">Seite einfügen</h3>
+      <p class="leise">Hast du anderswo eine fertig analysierte Seite als Text, füge sie hier ein.</p>
+      <textarea id="import-feld" placeholder="Hier einfügen …" autocomplete="off" spellcheck="false"></textarea>
+      <label class="btn2 datei">Oder Datei wählen (.json)<input type="file" id="import-datei" accept=".json,application/json,text/plain"></label>
+      <div class="rueck" id="import-meldung" hidden></div>
+      <div class="knoepfe" style="margin-top:12px"><button class="btn" data-act="importieren">Übernehmen</button></div></div>`;
+}
+
+function render() {
+  if (!geladen) { $('haupt').innerHTML = '<p class="lade">Dein Stand wird geladen …</p>'; return; }
+  $('autor').textContent = TEXT.autor || '';
+  $('schrift').textContent = TEXT.titel;
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('an', b.dataset.tab === stand.tab));
+  if (stand.tab === 'methode') renderMethode();
+  else if (stand.tab === 'vokabeln') renderVokabeln();
+  else if (stand.tab === 'neu') renderNeu();
+  else renderText();
+}
+
+// ───────────────────────────── Blatt (Wortkarte, Übersicht)
+let blattTimer = null;
+function oeffneBlatt(html) {
+  clearTimeout(blattTimer);
+  const b = $('blatt'), sch = $('schleier');
+  b.innerHTML = '<div class="griff"></div>' + html;
+  b.hidden = false; sch.hidden = false; void b.offsetWidth;
+  b.classList.add('an'); sch.classList.add('an');
+  b.scrollTop = 0;
+}
+function schliesseBlatt() {
+  const b = $('blatt'), sch = $('schleier');
+  b.classList.remove('an'); sch.classList.remove('an');
+  clearTimeout(blattTimer);
+  blattTimer = setTimeout(() => { b.hidden = true; sch.hidden = true; }, 300);
+}
+
+function zeigeWort(i) {
+  const s = satz(), wd = s.w[i], key = lemmaKey(wd);
+  if (!stand.vok[key]) {
+    stand.vok[key] = { l: wd.l, b: wd.b, form: wd.t, werk: TEXT.titel, satz: stand.satz + 1, zeit: Date.now(), gewusst: 0 };
+    speichere();
+  }
+  const offen = fort().fertig || sitzung.aufgedeckt.has(s.id + ':' + i);
+  oeffneBlatt(`<div class="wkopf"><span class="wform">${esc(wd.t)}</span>
+      <button class="stern ${stand.vok[key] ? 'an' : ''}" data-act="stern" data-i="${i}">${stand.vok[key] ? '★ in Vokabeln' : '☆ merken'}</button></div>
+    <div class="wfeld"><div class="wlabel">Wörterbuch</div><div class="wlemma">${esc(wd.l)}</div></div>
+    <div class="wfeld"><div class="wlabel">Bedeutung</div><div>${esc(wd.b)}</div></div>
+    ${offen ? `<div class="wfeld"><div class="wlabel">Form</div><div>${esc(wd.f)}</div></div>
+      <div class="wfeld"><div class="wlabel">Im Satz</div><div><span class="wrolle r-${wd.rolle}">${ROLLEN[wd.rolle]}</span> ${esc(wd.fn)}</div></div>`
+      : `<div class="wfeld"><p class="leise">Form und Funktion erst selbst bestimmen – dann aufdecken.</p>
+      <button class="btn2 voll" data-act="aufdecken" data-i="${i}">Form &amp; Funktion aufdecken</button></div>`}
+    <button class="btn voll" data-act="schliessen" style="margin-top:6px">Schließen</button>`);
+}
+
+function fortschritt(t) {
+  return t.saetze.filter(s => stand.fort[s.id]?.fertig).length;
+}
+function textListe() {
+  if (ALLE.length < 2) return '';
+  return '<h3>Deine Texte</h3><ul class="tliste">' + ALLE.map(t => {
+    const hier = t.id === TEXT.id, eigen = !TEXTE.includes(t);
+    return `<li class="${hier ? 'hier' : ''}"><button class="twahl" data-act="text" data-id="${esc(t.id)}">
+        <span class="ttitel">${esc(t.titel)}</span><span class="tunter">${esc(t.untertitel || '')}${t.auto ? ' · automatisch erstellt' : ''}</span>
+        <span class="tstand">${fortschritt(t)} / ${t.saetze.length}</span></button>
+      ${eigen ? `<button class="vweg" data-act="text-weg" data-id="${esc(t.id)}" aria-label="Text entfernen">✕</button>` : ''}</li>`;
+  }).join('') + '</ul>';
+}
+
+function zeigeUebersicht() {
+  const gesamt = SAETZE.map(s => (stand.ueb[s.id] || '').trim()).filter(Boolean).join(' ');
+  oeffneBlatt(`${textListe()}<h2>${esc(TEXT.titel)}</h2><p class="leise">${esc(TEXT.untertitel || '')}</p>
+    <ul class="uliste">${SAETZE.map((s, k) => {
+      const f = stand.fort[s.id], anf = s.w.filter(x => !x.p).slice(0, 5).map(x => x.t).join(' ');
+      const st = f?.fertig ? '✓' : f && Object.keys(f.g).length ? '…' : '';
+      return `<li><button data-act="springe" data-k="${k}"><span class="nr ${k === stand.satz ? 'hier' : ''}">${k + 1}</span><span class="anf">${esc(anf)} …</span><span class="st">${st}</span></button></li>`;
+    }).join('')}</ul>
+    <h3>Deine Übersetzung</h3>
+    <p class="gesamt">${gesamt ? esc(gesamt) : '<span class="leise">Noch leer.</span>'}</p>
+    <div class="knoepfe" style="margin-top:14px">
+      <button class="btn2" data-act="reset-satz">Satz ${stand.satz + 1} neu beginnen</button>
+      <button class="btn rechts" data-act="schliessen">Schließen</button></div>`);
+}
+
+// Nimmt eine Seite (Objekt oder JSON-Text) in die Bibliothek auf. Liefert null bei Erfolg, sonst eine Fehlermeldung (HTML).
+function uebernimm(quelle) {
+  let t = quelle;
+  if (typeof quelle === 'string') {
+    try { t = JSON.parse(quelle.trim()); } catch (_) { return 'Das ist keine vollständige Seite. Bitte den ganzen Text einfügen.'; }
+  }
+  const fehler = Pruefung.pruefeText(t);
+  if (fehler.length) {
+    return 'Nicht übernommen – die Seite hat formale Fehler:<br>' + fehler.slice(0, 6).map(esc).join('<br>') +
+      (fehler.length > 6 ? `<br>… und ${fehler.length - 6} weitere.` : '');
+  }
+  t = klon(t);
+  if (!/^[A-Za-z0-9_.~:@+-]+$/.test(t.id) || ALLE.some(x => x.id === t.id)) t.id = 'seite-' + Date.now().toString(36);
+  t.saetze.forEach(s => { s.id = `${t.id}/${s.id}`; });   // Fortschritt je Text getrennt halten
+  if (t.auto !== false) t.auto = true;
+  const json = JSON.stringify(t);
+  importRoh.push(json);
+  try { Lager.speichereText(t.id, json, importRoh)?.catch?.(() => melde('Speichern im Konto fehlgeschlagen.')); }
+  catch (_) { importRoh.pop(); return 'Der Speicher auf diesem Gerät ist voll. Entferne zuerst eine ältere Seite.'; }
+  bereite(t); ALLE.push(t);
+  waehleText(t.id); neueSitzung();
+  stand.tab = 'text'; speichereAlles(); render(); window.scrollTo(0, 0);
+  showInfo('Neu in der Bibliothek: ' + TEXT.titel + ' – ' + SAETZE.length + ' Sätze', 4);
+  return null;
+}
+
+function entferneText(id) {
+  const t = ALLE.find(x => x.id === id);
+  if (!t || TEXTE.includes(t)) return;
+  importRoh = importRoh.filter(roh => { try { return JSON.parse(roh).id !== id; } catch (_) { return false; } });
+  Lager.loescheText(id, importRoh);
+  ALLE.splice(ALLE.indexOf(t), 1);
+  for (const s of t.saetze) for (const feld of ['fort', 'ueb', 'haken', 'alle', 'modus']) delete stand[feld][s.id];
+  delete stand.pos[id];
+  if (TEXT === t) { TEXT = null; waehleText(TEXTE[0].id); }
+  neueSitzung(); speichereAlles();
+}
+
+// ───────────────────────────── Aktionen
+function grund(st, i) {
+  if (st._falsch.has(i)) return st._falsch.get(i);
+  const wd = satz().w[i];
+  switch (st.ph) {
+    case 'verb':
+      if (/Inf\./.test(wd.f)) return 'Infinitiv – keine Personalendung, also kein Prädikat.';
+      if (/Part\.|PPP|PPA|PFA/.test(wd.f)) return 'Partizip – keine Personalendung, also kein Prädikat.';
+      if (/Gerund/.test(wd.f)) return 'nd-Form – keine Personalendung.';
+      return `keine finite Verbform (${wd.f}).`;
+    case 'gliedern': return 'leitet keinen Gliedsatz ein.';
+    case 'subjekt': return /Nom\./.test(wd.f) ? 'Nominativ ja – aber passt es inhaltlich und im Numerus zum Prädikat?' : `kein Nominativ (${wd.f}).`;
+    case 'ergaenzung': return 'ist keine Ergänzung dieses Verbs.';
+    case 'bezug': return 'passt nicht – prüfe Kasus, Numerus, Genus und den Sinn.';
+  }
+  return 'passt hier nicht.';
+}
+
+function loese(status) {
+  fort().g[fort().akt] = status;
+  sitzung.ergebnis = null; sitzung.rueck = '';
+  speichere(); render();
+}
+
+function pruefe() {
+  const s = satz(), st = schritt(), sel = sitzung.auswahl;
+  if (!sel.size) { sitzung.rueck = 'Tippe zuerst im Text die passenden Wörter an.'; return render(); }
+  const ziel = new Set(st._ziel), auch = new Set(st._auch);
+  const ok = new Set(), bad = new Set();
+  sel.forEach(i => (ziel.has(i) || auch.has(i) ? ok : bad).add(i));
+  const fehlt = st._ziel.filter(i => !sel.has(i)).length;
+  sitzung.versuche++;
+  if (!bad.size && !fehlt) return loese(sitzung.versuche === 1 && !sitzung.tipp ? 'ok' : 'fehler');
+  const meld = [...bad].map(i => `<b>${esc(s.w[i].t)}</b>: ${esc(grund(st, i))}`);
+  if (fehlt) meld.push(fehlt === 1 ? (bad.size ? 'Außerdem fehlt noch eines.' : 'Gut so weit – eines fehlt noch.') : `${bad.size ? 'Außerdem fehlen' : 'Gut so weit – es fehlen'} noch ${fehlt}.`);
+  bad.forEach(i => sel.delete(i));
+  sitzung.ergebnis = { ok, bad };
+  sitzung.rueck = meld.join('<br>');
+  render();
+}
+
+function wechsleSatz(k) {
+  if (k < 0 || k >= SAETZE.length) return;
+  stand.satz = k; stand.pos[TEXT.id] = k; neueSitzung(); sitzung.satzbildOffen = null;
+  speichere(); render(); window.scrollTo(0, 0);
+}
+
+function zumText() {
+  const el = $('latein');
+  if (el && el.getBoundingClientRect().top < 60) window.scrollTo({ top: el.offsetTop - 70, behavior: 'smooth' });
+}
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act], [data-i], [data-tab]');
+  if (!el || !geladen) return;
+
+  if (el.dataset.tab) {
+    stand.tab = el.dataset.tab; abfrage = null; speichere(); render(); window.scrollTo(0, 0); return;
+  }
+  const act = el.dataset.act;
+
+  // Wort im Text angetippt
+  if (!act && el.dataset.i !== undefined) {
+    const i = Number(el.dataset.i), st = schritt(), offen = !fort().g[fort().akt];
+    const auswahl = el.closest('#latein') && modus() === 'gefuehrt' && offen && !sitzung.nachschlagen &&
+      (st.typ === 'tippen' || st.typ === 'bezug');
+    if (!auswahl) return zeigeWort(i);
+    if (i === st._fokus) return;
+    if (st.typ === 'bezug') sitzung.auswahl = sitzung.auswahl.has(i) ? new Set() : new Set([i]);
+    else sitzung.auswahl.has(i) ? sitzung.auswahl.delete(i) : sitzung.auswahl.add(i);
+    sitzung.ergebnis = null; sitzung.rueck = '';
+    return render();
+  }
+
+  const s = satz(), f = fort(), st = schritt();
+  switch (act) {
+    case 'zurueck': return wechsleSatz(stand.satz - 1);
+    case 'vor': return wechsleSatz(stand.satz + 1);
+    case 'uebersicht': return zeigeUebersicht();
+    case 'springe': schliesseBlatt(); return wechsleSatz(Number(el.dataset.k));
+    case 'text':
+      waehleText(el.dataset.id); neueSitzung(); speichereAlles(); render();
+      window.scrollTo(0, 0); return zeigeUebersicht();
+    case 'text-weg':
+      // Zweistufig: erst nachfragen, dann entfernen (confirm() gibt es in Web-Apps nicht zuverlässig)
+      if (el.dataset.sicher !== '1') { el.dataset.sicher = '1'; el.textContent = 'Entfernen?'; el.classList.add('warnen'); return; }
+      entferneText(el.dataset.id); render(); return zeigeUebersicht();
+    case 'importieren': {
+      const fehler = uebernimm($('import-feld').value);
+      if (fehler) { const m = $('import-meldung'); m.innerHTML = fehler; m.hidden = false; }
+      return;
+    }
+    case 'schliessen': return schliesseBlatt();
+    case 'modus': stand.modus[s.id] = el.dataset.m; neueSitzung(); speichere(); return render();
+    case 'nachschlagen': sitzung.nachschlagen = el.dataset.v === '1'; return render();
+    case 'tipp': sitzung.tipp = true; return render();
+    case 'pruefen': return pruefe();
+    case 'loesung':
+      if (st.typ === 'wahl') sitzung.wahlFalsch.clear();
+      sitzung.auswahl.clear();
+      return loese('hilfe');
+    case 'wahl': {
+      const o = Number(el.dataset.o);
+      if (o === st.ok) return loese(sitzung.wahlFalsch.size || sitzung.tipp ? 'fehler' : 'ok');
+      sitzung.wahlFalsch.add(o); return render();
+    }
+    case 'weiter':
+      if (f.akt < s.schritte.length - 1) f.akt++;
+      neueSitzung(); speichere(); render(); return zumText();
+    case 'gehe': f.akt = Number(el.dataset.k); neueSitzung(); speichere(); return render();
+    case 'satzbild-frei': sitzung.satzbildOffen = true; return render();
+    case 'zeige-w': sitzung.zeigeW = true; speichereAlles(); return render();
+    case 'zeige-g': sitzung.zeigeG = true; speichereAlles(); return render();
+    case 'fertig':
+      f.fertig = true;
+      if (modus() === 'gefuehrt') f.g[s.schritte.length - 1] ||= 'ok';
+      speichereAlles(); return render();
+    case 'alle': stand.alle[s.id] = !stand.alle[s.id]; speichere(); return render();
+    case 'aufdecken': sitzung.aufgedeckt.add(s.id + ':' + el.dataset.i); return zeigeWort(Number(el.dataset.i));
+    case 'stern': {
+      const wd = s.w[Number(el.dataset.i)], key = lemmaKey(wd);
+      if (stand.vok[key]) delete stand.vok[key];
+      else stand.vok[key] = { l: wd.l, b: wd.b, form: wd.t, werk: TEXT.titel, satz: stand.satz + 1, zeit: Date.now(), gewusst: 0 };
+      speichere();
+      el.classList.toggle('an', !!stand.vok[key]);
+      el.textContent = stand.vok[key] ? '★ in Vokabeln' : '☆ merken';
+      return;
+    }
+    case 'reset-satz':
+      delete stand.fort[s.id]; delete stand.haken[s.id]; delete stand.alle[s.id];
+      neueSitzung(); speichereAlles(); schliesseBlatt(); return render();
+    case 'vok-weg': delete stand.vok[el.dataset.key]; speichere(); return render();
+    case 'abfrage': {
+      const keys = Object.keys(stand.vok);
+      for (let i = keys.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [keys[i], keys[j]] = [keys[j], keys[i]]; }
+      keys.sort((a, b) => stand.vok[a].gewusst - stand.vok[b].gewusst);   // stabil: Ungeübtes zuerst
+      abfrage = { reihe: keys, zeigen: false, gewusst: 0, nochmal: 0 };
+      return render();
+    }
+    case 'abfrage-zeigen': abfrage.zeigen = true; return render();
+    case 'abfrage-gewusst': {
+      const key = abfrage.reihe.shift();
+      if (stand.vok[key]) stand.vok[key].gewusst++;
+      abfrage.gewusst++; abfrage.zeigen = false; speichere(); return render();
+    }
+    case 'abfrage-nochmal': {
+      const key = abfrage.reihe.shift();
+      abfrage.reihe.splice(Math.min(3, abfrage.reihe.length), 0, key);
+      abfrage.nochmal++; abfrage.zeigen = false; return render();
+    }
+    case 'abfrage-ende': abfrage = null; return render();
+  }
+});
+
+document.addEventListener('change', e => {
+  if (e.target.id === 'import-datei' && e.target.files[0]) {
+    const leser = new FileReader();
+    leser.onload = () => { $('import-feld').value = leser.result; };
+    leser.readAsText(e.target.files[0]);
+    return;
+  }
+  if (e.target.dataset.act === 'haken') {
+    const id = satz().id, h = stand.haken[id] ||= [];
+    h[Number(e.target.dataset.k)] = e.target.checked;
+    speichere(); render();
+  }
+});
+document.addEventListener('input', e => {
+  if (e.target.id === 'ueb') { stand.ueb[satz().id] = e.target.value; speichere(); }
+});
+document.addEventListener('toggle', e => {
+  if (e.target.matches?.('details.satzbild') && gegliedert()) sitzung.satzbildOffen = e.target.open;
+}, true);
+$('schleier').addEventListener('click', schliesseBlatt);
+window.addEventListener('pagehide', speichereAlles);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') speichereAlles(); });
+
+function melde(text) { showInfo(text, 5); }
+
+async function starte() {
+  render();                                   // Ladezustand
+  db = await use('db');
+  if (db) { const user = await use('user'); uid = user ? await user.id() : null; }
+  if (db && uid) Lager.art = 'konto';
+  const [standRoh, vokRoh, texte, werkstattRoh] = await Promise.all([Lager.lies('stand'), Lager.lies('vokabeln'), Lager.ladeTexte(), Lager.lies('werkstatt')]);
+  stand = Object.assign(neuerStand(), standRoh || {});
+  if (vokRoh?.vok) stand.vok = vokRoh.vok;    // sonst bleibt vok aus einem alten Stand (Version 1.x) erhalten
+  for (const roh of texte) {
+    try { const t = JSON.parse(roh); if (!Pruefung.pruefeText(t).length) { importRoh.push(roh); ALLE.push(t); bereite(t); } } catch (_) {}
+  }
+  if (!stand.text && stand.satz) stand.pos[TEXTE[0].id] = stand.satz;   // Stand aus Version 1.0 übernehmen
+  waehleText(stand.text);
+  geladen = true;
+
+  sample = await use('sample');
+  if (sample) {
+    grenzen = await sample.limits().catch(() => null);
+    Werkstatt.init({ sample, grenzen, esc, $, melde, laden: () => werkstattRoh, speichern: speichereWerkstatt, uebernehmen: uebernimm });
+  }
+  render();
+}
+starte();
+
+// ───────────────────────────── Updates (siehe Skill app-update-iphone)
+const versionEl = $('version');
+versionEl.textContent = 'v' + APP_VERSION;
+const updateEl = $('update');
+let ausTimer = null, infoTimer = null;
+
+function einblenden() {
+  clearTimeout(ausTimer);
+  updateEl.hidden = false; void updateEl.offsetWidth;
+  updateEl.classList.add('an');
+}
+function ausblenden() {
+  updateEl.classList.remove('an'); clearTimeout(ausTimer);
+  ausTimer = setTimeout(() => { if (!updateEl.classList.contains('an')) updateEl.hidden = true; }, 380);
+}
+function bannerAnKante(ausloeser) {
+  if (!ausloeser) { updateEl.classList.remove('unten'); return; }
+  const r = ausloeser.getBoundingClientRect();
+  updateEl.classList.toggle('unten', r.top + r.height / 2 > window.innerHeight / 2);
+}
+function showInfo(text, sekunden = 2, ausloeser = null) {
+  updateEl.className = 'update info';
+  bannerAnKante(ausloeser);
+  $('update-text').textContent = text;
+  $('update-go').hidden = true;
+  einblenden();
+  clearTimeout(infoTimer);
+  if (sekunden) infoTimer = setTimeout(() => { if (updateEl.classList.contains('info')) ausblenden(); }, sekunden * 1000);
+}
+function zeigeBanner(text) {
+  updateEl.className = 'update';
+  bannerAnKante(null);
+  $('update-text').textContent = text;
+  $('update-go').hidden = false;
+  einblenden();
+}
+updateEl.addEventListener('click', () => { if (updateEl.classList.contains('info')) ausblenden(); });
+$('update-go').addEventListener('click', () => { speichereAlles(); location.reload(); });
+
+let pruefeGerade = false, gemeldet = null;
+const imArtefakt = !!(window.claude && typeof window.claude.use === 'function');
+async function checkForUpdate(manual = false) {
+  if (imArtefakt) { if (manual) showInfo('Version ' + APP_VERSION + ' – Aktualisierungen kommen in claude.ai von selbst', 4, versionEl); return; }
+  if (pruefeGerade) return;
+  if (!manual && document.visibilityState !== 'visible') return;
+  if (!navigator.onLine) { if (manual) showInfo('Offline – Prüfung nicht möglich', 3, versionEl); return; }
+  pruefeGerade = true;
+  try {
+    const res = await fetch('index.html', { cache: 'no-store' });
+    if (!res.ok) return;
+    const m = (await res.text()).match(/APP_VERSION = '([^']+)'/);
+    if (m && m[1] !== APP_VERSION) announceUpdate(m[1], manual);
+    else if (manual) showInfo('Version ' + APP_VERSION + ' ist aktuell', 4, versionEl);
+  } catch (_) { if (manual) showInfo('Prüfung fehlgeschlagen', 3, versionEl); }
+  finally { pruefeGerade = false; }
+}
+function announceUpdate(v, manual) {
+  if (gemeldet === v && !manual) return;
+  gemeldet = v;
+  speichereAlles();
+  zeigeBanner('Neue Version ' + v + ' ist da');
+  const tippt = document.activeElement && document.activeElement.id === 'ueb';
+  if (manual || !tippt) setTimeout(() => { speichereAlles(); location.reload(); }, manual ? 1500 : 3000);
+}
+window.addEventListener('pageshow', () => setTimeout(checkForUpdate, 800));
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkForUpdate(); });
+versionEl.addEventListener('click', () => checkForUpdate(true));
+
+{
+  const GESEHEN = 'seneca.gesehen';
+  let vorher = null;
+  try { vorher = localStorage.getItem(GESEHEN); } catch (_) {}
+  if (vorher !== APP_VERSION) {
+    try { localStorage.setItem(GESEHEN, APP_VERSION); } catch (_) {}
+    if (vorher) setTimeout(() => showInfo('Version ' + APP_VERSION + ' ist geladen', 4), 400);
+  }
+}
+
+if (!imArtefakt && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+</script>

@@ -1,10 +1,10 @@
 'use strict';
-/* Übersetzungshilfe Seneca – Logik. Daten: daten.js (TEXTE, eingebaut) und importierte Seiten. */
+/* Übersetzungshilfe Seneca – Logik. Daten: daten.js (TEXTE, eingebaut) und eigene Seiten.
+   Läuft an zwei Orten: als Artefakt in claude.ai (Stand im Konto, neue Seiten per Foto über werkstatt.js)
+   und als Web-App auf GitHub Pages (Stand im Gerät, neue Seiten nur per Einfügen). */
 
-const SPEICHER = 'seneca.stand';
-const IMPORT_SPEICHER = 'seneca.importe';
-// Import-Werkstatt in claude.ai: macht aus einem Foto eine importierbare Seite
-const WERKSTATT = 'https://claude.ai/artifact/EM8QYEVRPWn95FFsMkh4tx';
+// Die Fassung in claude.ai – von der Pages-Fassung aus verlinkt
+const ARTEFAKT = 'https://claude.ai/artifact/EM8QYEVRPWn95FFsMkh4tx';
 
 const ROLLEN = { P: 'Prädikat', S: 'Subjekt', O: 'Objekt / Ergänzung', A: 'Adverbiale', T: 'Attribut', K: 'Konnektor / Einleitewort', V: 'Anrede' };
 const LEGENDE = { P: 'Prädikat', S: 'Subjekt', O: 'Objekt', A: 'Adverbiale', T: 'Attribut', K: 'Konnektor', V: 'Anrede' };
@@ -54,13 +54,58 @@ function bereite(text) {
   }
 }
 
-// Importierte Texte liegen als JSON-Zeichenketten im Speicher (unverändert, ohne Laufzeitfelder)
-let importRoh = [];
-try { importRoh = JSON.parse(localStorage.getItem(IMPORT_SPEICHER)) || []; } catch (_) {}
+// ───────────────────────────── Speicher: Konto (claude.ai) oder Gerät (localStorage)
+// Dokumente: stand (Fortschritt), vokabeln, werkstatt (angefangene Seite), texte/<id> (eigene Seiten als JSON-Text).
+// Im Konto liegt alles unter data/users/<id>/ – privat, auf jedem Gerät gleich. Auf dem Gerät unter seneca.*.
+const use = n => (window.claude && typeof window.claude.use === 'function' ? window.claude.use(n) : Promise.resolve(null));
+const klon = x => (x == null ? x : JSON.parse(JSON.stringify(x)));
+let db = null, uid = null, sample = null, grenzen = null, geladen = false;
+
+const Lager = {
+  art: 'geraet',
+  letzt: {}, kette: {},
+  ref(name) { return db.doc(`data/users/${uid}/${name}`); },
+  texte() { return db.collection(`data/users/${uid}/bibliothek/texte`); },
+  async lies(name) {
+    if (this.art === 'konto') {
+      const snap = await this.ref(name).get();
+      const d = snap.exists ? klon(snap.data()) : null;
+      this.letzt[name] = d ? JSON.stringify(d) : null;
+      return d;
+    }
+    try { return JSON.parse(localStorage.getItem('seneca.' + name)); } catch (_) { return null; }
+  },
+  // Schreibt nur bei Änderung, je Dokument einen Vorgang nach dem anderen
+  schreib(name, obj) {
+    const json = JSON.stringify(obj);
+    if (json === this.letzt[name]) return;
+    this.letzt[name] = json;
+    if (this.art !== 'konto') { try { localStorage.setItem('seneca.' + name, json); } catch (_) { melde('Der Speicher auf diesem Gerät ist voll.'); } return; }
+    const daten = JSON.parse(json);
+    this.kette[name] = (this.kette[name] || Promise.resolve())
+      .then(() => this.ref(name).set(daten))
+      .catch(e => this.ref(name).set(daten).catch(e2 => melde(e2?.code === 'quota_exceeded' ? 'Dein Speicher in claude.ai ist voll – entferne einen älteren Text.' : 'Speichern im Konto fehlgeschlagen.')));
+  },
+  async ladeTexte() {
+    if (this.art === 'konto') {
+      const q = await this.texte().get();
+      return q.docs.map(d => d.data().json).filter(x => typeof x === 'string');
+    }
+    try { return JSON.parse(localStorage.getItem('seneca.importe')) || []; } catch (_) { return []; }
+  },
+  async speichereText(id, json, alle) {
+    if (this.art === 'konto') return this.texte().doc(id).set({ id, json });
+    try { localStorage.setItem('seneca.importe', JSON.stringify(alle)); }
+    catch (_) { throw new Error('voll'); }
+  },
+  loescheText(id, alle) {
+    if (this.art === 'konto') return this.texte().doc(id).delete().catch(() => {});
+    try { localStorage.setItem('seneca.importe', JSON.stringify(alle)); } catch (_) {}
+  },
+};
+
+let importRoh = [];               // eigene Seiten als JSON-Zeichenketten (ohne Laufzeitfelder)
 const ALLE = [...TEXTE];
-for (const roh of importRoh) {
-  try { const t = JSON.parse(roh); if (!Pruefung.pruefeText(t).length) ALLE.push(t); } catch (_) {}
-}
 ALLE.forEach(bereite);
 let TEXT = null, SAETZE = [];
 
@@ -68,11 +113,7 @@ let TEXT = null, SAETZE = [];
 function neuerStand() {
   return { text: null, pos: {}, satz: 0, tab: 'text', modus: {}, fort: {}, ueb: {}, haken: {}, vok: {}, alle: {} };
 }
-let stand = (() => {
-  try { return Object.assign(neuerStand(), JSON.parse(localStorage.getItem(SPEICHER)) || {}); }
-  catch (_) { return neuerStand(); }
-})();
-if (!stand.text) stand.pos[TEXTE[0].id] = stand.satz;   // Stand aus Version 1.0 übernehmen
+let stand = neuerStand();
 
 function waehleText(id) {
   if (TEXT) stand.pos[TEXT.id] = stand.satz;
@@ -82,13 +123,22 @@ function waehleText(id) {
   stand.satz = stand.pos[TEXT.id] ?? 0;
   if (!(stand.satz >= 0 && stand.satz < SAETZE.length)) stand.satz = 0;
 }
-waehleText(stand.text);
 
 let speicherTimer = null;
-function speichere() { clearTimeout(speicherTimer); speicherTimer = setTimeout(speichereAlles, 250); }
+function speichere() { clearTimeout(speicherTimer); speicherTimer = setTimeout(speichereAlles, Lager.art === 'konto' ? 800 : 250); }
 function speichereAlles() {
   clearTimeout(speicherTimer);
-  try { localStorage.setItem(SPEICHER, JSON.stringify(stand)); } catch (_) {}
+  if (!geladen) return;
+  const { vok, ...rest } = stand;
+  Lager.schreib('stand', rest);
+  Lager.schreib('vokabeln', { vok });
+  if (werkstattTimer) { clearTimeout(werkstattTimer); werkstattTimer = null; Lager.schreib('werkstatt', werkstattStand); }
+}
+let werkstattTimer = null, werkstattStand = null;
+function speichereWerkstatt(st) {
+  werkstattStand = st;
+  clearTimeout(werkstattTimer);
+  werkstattTimer = setTimeout(() => { werkstattTimer = null; Lager.schreib('werkstatt', werkstattStand); }, 600);
 }
 
 // Flüchtiger Zustand des gerade bearbeiteten Schritts
@@ -404,12 +454,27 @@ function renderAbfrage() {
     <div class="knoepfe" style="margin-top:16px"><button class="btn2" data-act="abfrage-ende">Beenden</button></div></div>`;
 }
 
+function renderNeu() {
+  if (sample) return Werkstatt.render($('haupt'));
+  // Ohne Claude (GitHub Pages): auf die Fassung in claude.ai verweisen, Einfügen bleibt als Weg
+  $('haupt').innerHTML = `<h2>Neue Seite</h2>
+    <p>Fotos von Buchseiten analysiert die App nur in claude.ai – dort gehört Claude zur App. <a href="${ARTEFAKT}" target="_blank" rel="noopener">Seneca übersetzen in claude.ai öffnen</a></p>
+    <div class="karte nurpages"><h3 style="margin-top:0">Seite einfügen</h3>
+      <p class="leise">Hast du anderswo eine fertig analysierte Seite als Text, füge sie hier ein.</p>
+      <textarea id="import-feld" placeholder="Hier einfügen …" autocomplete="off" spellcheck="false"></textarea>
+      <label class="btn2 datei">Oder Datei wählen (.json)<input type="file" id="import-datei" accept=".json,application/json,text/plain"></label>
+      <div class="rueck" id="import-meldung" hidden></div>
+      <div class="knoepfe" style="margin-top:12px"><button class="btn" data-act="importieren">Übernehmen</button></div></div>`;
+}
+
 function render() {
+  if (!geladen) { $('haupt').innerHTML = '<p class="lade">Dein Stand wird geladen …</p>'; return; }
   $('autor').textContent = TEXT.autor || '';
   $('schrift').textContent = TEXT.titel;
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('an', b.dataset.tab === stand.tab));
   if (stand.tab === 'methode') renderMethode();
   else if (stand.tab === 'vokabeln') renderVokabeln();
+  else if (stand.tab === 'neu') renderNeu();
   else renderText();
 }
 
@@ -473,43 +538,33 @@ function zeigeUebersicht() {
     <h3>Deine Übersetzung</h3>
     <p class="gesamt">${gesamt ? esc(gesamt) : '<span class="leise">Noch leer.</span>'}</p>
     <div class="knoepfe" style="margin-top:14px">
-      <button class="btn2" data-act="import">Seite importieren</button>
       <button class="btn2" data-act="reset-satz">Satz ${stand.satz + 1} neu beginnen</button>
       <button class="btn rechts" data-act="schliessen">Schließen</button></div>`);
 }
 
-function zeigeImport(meldung = '') {
-  oeffneBlatt(`<h2>Seite importieren</h2>
-    <ol class="anleitung">
-      <li>${WERKSTATT ? `In der <a href="${WERKSTATT}" target="_blank" rel="noopener">Import-Werkstatt</a>` : 'In der Import-Werkstatt'} (claude.ai) das Foto einer Buchseite analysieren lassen.</li>
-      <li>Dort „Kopieren“ tippen, hier ins Feld einfügen, „Importieren“ tippen.</li>
-    </ol>
-    <textarea id="import-feld" placeholder="Hier einfügen …" autocomplete="off" spellcheck="false"></textarea>
-    <label class="btn2 datei">Oder Datei wählen (.json)<input type="file" id="import-datei" accept=".json,application/json,text/plain"></label>
-    ${meldung ? `<div class="rueck">${meldung}</div>` : ''}
-    <div class="knoepfe" style="margin-top:12px"><button class="btn" data-act="importieren">Importieren</button>
-      <button class="btn2 rechts" data-act="schliessen">Abbrechen</button></div>`);
-}
-
-// Liefert null bei Erfolg, sonst eine Fehlermeldung (HTML)
-function importiere(roh) {
-  let t;
-  try { t = JSON.parse(String(roh).trim()); } catch (_) {
-    return 'Das ist kein vollständiger Text aus der Werkstatt. Bitte dort noch einmal „Kopieren“ tippen und alles einfügen.';
+// Nimmt eine Seite (Objekt oder JSON-Text) in die Bibliothek auf. Liefert null bei Erfolg, sonst eine Fehlermeldung (HTML).
+function uebernimm(quelle) {
+  let t = quelle;
+  if (typeof quelle === 'string') {
+    try { t = JSON.parse(quelle.trim()); } catch (_) { return 'Das ist keine vollständige Seite. Bitte den ganzen Text einfügen.'; }
   }
   const fehler = Pruefung.pruefeText(t);
   if (fehler.length) {
-    return 'Nicht übernommen – der Text hat formale Fehler:<br>' + fehler.slice(0, 6).map(esc).join('<br>') +
+    return 'Nicht übernommen – die Seite hat formale Fehler:<br>' + fehler.slice(0, 6).map(esc).join('<br>') +
       (fehler.length > 6 ? `<br>… und ${fehler.length - 6} weitere.` : '');
   }
-  if (ALLE.some(x => x.id === t.id)) t.id += '-' + Date.now().toString(36);
+  t = klon(t);
+  if (!/^[A-Za-z0-9_.~:@+-]+$/.test(t.id) || ALLE.some(x => x.id === t.id)) t.id = 'seite-' + Date.now().toString(36);
   t.saetze.forEach(s => { s.id = `${t.id}/${s.id}`; });   // Fortschritt je Text getrennt halten
   if (t.auto !== false) t.auto = true;
-  importRoh.push(JSON.stringify(t));
-  try { localStorage.setItem(IMPORT_SPEICHER, JSON.stringify(importRoh)); }
-  catch (_) { importRoh.pop(); return 'Der Speicher auf diesem Gerät ist voll. Entferne zuerst einen älteren importierten Text.'; }
+  const json = JSON.stringify(t);
+  importRoh.push(json);
+  try { Lager.speichereText(t.id, json, importRoh)?.catch?.(() => melde('Speichern im Konto fehlgeschlagen.')); }
+  catch (_) { importRoh.pop(); return 'Der Speicher auf diesem Gerät ist voll. Entferne zuerst eine ältere Seite.'; }
   bereite(t); ALLE.push(t);
-  waehleText(t.id); neueSitzung(); speichereAlles();
+  waehleText(t.id); neueSitzung();
+  stand.tab = 'text'; speichereAlles(); render(); window.scrollTo(0, 0);
+  showInfo('Neu in der Bibliothek: ' + TEXT.titel + ' – ' + SAETZE.length + ' Sätze', 4);
   return null;
 }
 
@@ -517,7 +572,7 @@ function entferneText(id) {
   const t = ALLE.find(x => x.id === id);
   if (!t || TEXTE.includes(t)) return;
   importRoh = importRoh.filter(roh => { try { return JSON.parse(roh).id !== id; } catch (_) { return false; } });
-  try { localStorage.setItem(IMPORT_SPEICHER, JSON.stringify(importRoh)); } catch (_) {}
+  Lager.loescheText(id, importRoh);
   ALLE.splice(ALLE.indexOf(t), 1);
   for (const s of t.saetze) for (const feld of ['fort', 'ueb', 'haken', 'alle', 'modus']) delete stand[feld][s.id];
   delete stand.pos[id];
@@ -579,7 +634,7 @@ function zumText() {
 
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act], [data-i], [data-tab]');
-  if (!el) return;
+  if (!el || !geladen) return;
 
   if (el.dataset.tab) {
     stand.tab = el.dataset.tab; abfrage = null; speichere(); render(); window.scrollTo(0, 0); return;
@@ -612,12 +667,10 @@ document.addEventListener('click', e => {
       // Zweistufig: erst nachfragen, dann entfernen (confirm() gibt es in Web-Apps nicht zuverlässig)
       if (el.dataset.sicher !== '1') { el.dataset.sicher = '1'; el.textContent = 'Entfernen?'; el.classList.add('warnen'); return; }
       entferneText(el.dataset.id); render(); return zeigeUebersicht();
-    case 'import': return zeigeImport();
     case 'importieren': {
-      const fehler = importiere($('import-feld').value);
-      if (fehler) return zeigeImport(fehler);
-      schliesseBlatt(); stand.tab = 'text'; render(); window.scrollTo(0, 0);
-      return showInfo('Importiert: ' + TEXT.titel + ' – ' + SAETZE.length + ' Sätze', 4);
+      const fehler = uebernimm($('import-feld').value);
+      if (fehler) { const m = $('import-meldung'); m.innerHTML = fehler; m.hidden = false; }
+      return;
     }
     case 'schliessen': return schliesseBlatt();
     case 'modus': stand.modus[s.id] = el.dataset.m; neueSitzung(); speichere(); return render();
@@ -704,7 +757,31 @@ $('schleier').addEventListener('click', schliesseBlatt);
 window.addEventListener('pagehide', speichereAlles);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') speichereAlles(); });
 
-render();
+function melde(text) { showInfo(text, 5); }
+
+async function starte() {
+  render();                                   // Ladezustand
+  db = await use('db');
+  if (db) { const user = await use('user'); uid = user ? await user.id() : null; }
+  if (db && uid) Lager.art = 'konto';
+  const [standRoh, vokRoh, texte, werkstattRoh] = await Promise.all([Lager.lies('stand'), Lager.lies('vokabeln'), Lager.ladeTexte(), Lager.lies('werkstatt')]);
+  stand = Object.assign(neuerStand(), standRoh || {});
+  if (vokRoh?.vok) stand.vok = vokRoh.vok;    // sonst bleibt vok aus einem alten Stand (Version 1.x) erhalten
+  for (const roh of texte) {
+    try { const t = JSON.parse(roh); if (!Pruefung.pruefeText(t).length) { importRoh.push(roh); ALLE.push(t); bereite(t); } } catch (_) {}
+  }
+  if (!stand.text && stand.satz) stand.pos[TEXTE[0].id] = stand.satz;   // Stand aus Version 1.0 übernehmen
+  waehleText(stand.text);
+  geladen = true;
+
+  sample = await use('sample');
+  if (sample) {
+    grenzen = await sample.limits().catch(() => null);
+    Werkstatt.init({ sample, grenzen, esc, $, melde, laden: () => werkstattRoh, speichern: speichereWerkstatt, uebernehmen: uebernimm });
+  }
+  render();
+}
+starte();
 
 // ───────────────────────────── Updates (siehe Skill app-update-iphone)
 const versionEl = $('version');
@@ -746,7 +823,9 @@ updateEl.addEventListener('click', () => { if (updateEl.classList.contains('info
 $('update-go').addEventListener('click', () => { speichereAlles(); location.reload(); });
 
 let pruefeGerade = false, gemeldet = null;
+const imArtefakt = !!(window.claude && typeof window.claude.use === 'function');
 async function checkForUpdate(manual = false) {
+  if (imArtefakt) { if (manual) showInfo('Version ' + APP_VERSION + ' – Aktualisierungen kommen in claude.ai von selbst', 4, versionEl); return; }
   if (pruefeGerade) return;
   if (!manual && document.visibilityState !== 'visible') return;
   if (!navigator.onLine) { if (manual) showInfo('Offline – Prüfung nicht möglich', 3, versionEl); return; }
@@ -782,4 +861,4 @@ versionEl.addEventListener('click', () => checkForUpdate(true));
   }
 }
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if (!imArtefakt && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
