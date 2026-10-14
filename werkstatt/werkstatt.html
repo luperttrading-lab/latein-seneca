@@ -1,0 +1,589 @@
+<title>Seneca Import-Werkstatt</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Ein Arbeitsblatt in vier Schritten, dieselbe Papier-und-Pompejanischrot-Palette wie die App */
+:root {
+  --bg: #f6f2ea; --karte: #fffdf8; --text: #1f1c17; --leise: #6b645a; --linie: #e2dacb;
+  --akzent: #8c2f1f; --akzent-text: #fff; --gut: #2e7d32; --warn: #9a5b06; --fehler: #c0392b;
+  --ok-bg: #e3f2e4; --fehler-bg: #f8dcd8;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17161b; --karte: #212026; --text: #ece7de; --leise: #a39d92; --linie: #35333c;
+    --akzent: #e07a5f; --akzent-text: #1a0d08; --gut: #7bd282; --warn: #f0ad4e; --fehler: #ff7b6b;
+    --ok-bg: #1f3a24; --fehler-bg: #4a221d; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17161b; --karte: #212026; --text: #ece7de; --leise: #a39d92; --linie: #35333c;
+  --akzent: #e07a5f; --akzent-text: #1a0d08; --gut: #7bd282; --warn: #f0ad4e; --fehler: #ff7b6b;
+  --ok-bg: #1f3a24; --fehler-bg: #4a221d; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--text); font: 16px/1.5 var(--sans);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+.seite { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.eyebrow { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--akzent); }
+h1 { font-family: var(--serif); font-size: 32px; line-height: 1.15; margin: 2px 0 6px; text-wrap: balance; }
+h2 { font-family: var(--serif); font-size: 21px; margin: 0; display: flex; align-items: baseline; gap: 10px; }
+.nr { font-family: var(--sans); font-size: 13px; font-weight: 700; color: var(--akzent); border: 1.5px solid currentColor; border-radius: 999px; width: 24px; height: 24px; display: inline-grid; place-items: center; flex: none; }
+p { margin: 0; }
+.leise { color: var(--leise); font-size: 14px; }
+.schritt { background: var(--karte); border: 1px solid var(--linie); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.schritt.zu { opacity: .55; }
+.schritt.zu .nur-offen { display: none; }
+.hinweis { border-left: 4px solid var(--warn); background: var(--karte); padding: 10px 12px; border-radius: 10px; }
+.knoepfe { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { border: 0; background: var(--akzent); color: var(--akzent-text); font: 600 15px var(--sans); border-radius: 12px; padding: 10px 16px; cursor: pointer; }
+.btn2 { border: 1.5px solid var(--linie); background: none; color: var(--text); font: 15px var(--sans); border-radius: 12px; padding: 9px 14px; cursor: pointer; }
+.btn:disabled, .btn2:disabled { opacity: .45; cursor: default; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--akzent); outline-offset: 2px; }
+.datei input { display: block; margin-top: 6px; font-size: 14px; max-width: 100%; }
+.vorschau { display: flex; flex-wrap: wrap; gap: 8px; }
+.vorschau img { height: 96px; width: auto; border-radius: 8px; border: 1px solid var(--linie); }
+textarea, input[type=text] {
+  width: 100%; border: 1.5px solid var(--linie); border-radius: 10px; padding: 8px 10px;
+  font: 16px/1.45 var(--sans); background: var(--bg); color: var(--text);
+}
+textarea.latein { font-family: var(--serif); font-size: 18px; resize: vertical; }
+.felder { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.felder label { font-size: 12px; font-weight: 700; color: var(--leise); text-transform: uppercase; letter-spacing: .03em; display: flex; flex-direction: column; gap: 4px; }
+.einheiten { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.einheit { border-top: 1px solid var(--linie); padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.ekopf { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--leise); }
+.ekopf input { width: 72px; padding: 4px 6px; font-size: 14px; }
+.ekopf .weg { margin-left: auto; border: 0; background: none; color: var(--leise); cursor: pointer; font-size: 14px; padding: 4px 6px; }
+.unsicher { font-size: 14px; color: var(--warn); }
+.liste { list-style: none; padding: 0; margin: 0; }
+.liste li { display: grid; grid-template-columns: 34px 1fr auto; gap: 4px 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--linie); }
+.liste .snr { font-weight: 700; font-variant-numeric: tabular-nums; }
+.liste .sanf { font-family: var(--serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.liste .sstat { font-size: 13px; font-weight: 600; white-space: nowrap; }
+.liste .smeld { grid-column: 2 / span 2; font-size: 13px; color: var(--fehler); }
+.s-fertig { color: var(--gut); } .s-laeuft { color: var(--warn); } .s-fehler { color: var(--fehler); } .s-offen { color: var(--leise); }
+.ergebnis { border-radius: 10px; padding: 10px 12px; font-size: 15px; }
+.ergebnis.gut { background: var(--ok-bg); } .ergebnis.schlecht { background: var(--fehler-bg); }
+#ausgabe { font: 12px/1.4 ui-monospace, Menlo, monospace; height: 110px; }
+a { color: var(--akzent); }
+@media (prefers-reduced-motion: no-preference) { .schritt { transition: opacity .2s ease; } }
+</style>
+
+<main class="seite">
+  <header>
+    <p class="eyebrow">Seneca übersetzen</p>
+    <h1>Import-Werkstatt</h1>
+    <p>Aus dem Foto einer Buchseite wird eine neue Seite für deine Übersetzungs-App: Claude liest den lateinischen Text, du prüfst ihn, Claude analysiert Satz für Satz, du überträgst das Ergebnis in die App.</p>
+  </header>
+
+  <p class="hinweis" id="fehlt" hidden>Diese Seite braucht Claude. Öffne sie angemeldet in claude.ai oder in der Claude-App.</p>
+
+  <section class="schritt" id="s1">
+    <h2><span class="nr">1</span>Foto der Buchseite</h2>
+    <p class="leise">Gerade von oben, gut ausgeleuchtet, die ganze Seite im Bild. Bis zu zwei Seiten auf einmal. Nur der lateinische Text wird übernommen – Übersetzungen und Anmerkungen der Ausgabe nicht.</p>
+    <label class="btn2 datei" id="foto-label">Foto wählen<input type="file" id="foto" accept="image/jpeg,image/png,image/webp" multiple></label>
+    <div class="vorschau" id="vorschau"></div>
+    <details>
+      <summary class="leise">Ohne Foto: lateinischen Text einfügen</summary>
+      <textarea id="rohtext" class="latein" rows="5" placeholder="Vivere, Gallio frater, omnes beate volunt …"></textarea>
+    </details>
+    <div class="knoepfe">
+      <button class="btn" id="erkennen" disabled>Text erkennen</button>
+      <span class="leise" id="s1-status"></span>
+    </div>
+  </section>
+
+  <section class="schritt zu" id="s2">
+    <h2><span class="nr">2</span>Text prüfen</h2>
+    <p class="leise">Vergleiche jede Einheit Wort für Wort mit dem Buch und korrigiere Lesefehler. Eine Einheit ist ein Satz, sehr lange Perioden sind geteilt.</p>
+    <div class="felder nur-offen">
+      <label>Autor<input type="text" id="autor"></label>
+      <label>Werk<input type="text" id="werk"></label>
+      <label>Stelle<input type="text" id="stelle"></label>
+    </div>
+    <p class="unsicher nur-offen" id="unsicher" hidden></p>
+    <ol class="einheiten nur-offen" id="einheiten"></ol>
+    <div class="knoepfe nur-offen">
+      <button class="btn" id="analysieren">Analysieren</button>
+      <span class="leise" id="s2-status"></span>
+    </div>
+  </section>
+
+  <section class="schritt zu" id="s3">
+    <h2><span class="nr">3</span>Analyse</h2>
+    <p class="leise">Pro Satz ein bis zwei Minuten. Fertige Sätze bleiben gespeichert, auch wenn du die Seite schließt.</p>
+    <ul class="liste nur-offen" id="fortschritt"></ul>
+    <div class="knoepfe nur-offen">
+      <button class="btn2" id="stopp" hidden>Anhalten</button>
+      <button class="btn" id="weiter" hidden>Fehlende analysieren</button>
+    </div>
+  </section>
+
+  <section class="schritt zu" id="s4">
+    <h2><span class="nr">4</span>In die App übertragen</h2>
+    <div class="ergebnis nur-offen" id="ergebnis" hidden></div>
+    <div class="knoepfe nur-offen">
+      <button class="btn" id="kopieren">Kopieren</button>
+      <button class="btn2" id="sichern" hidden>Als Datei sichern</button>
+      <span class="leise" id="s4-status"></span>
+    </div>
+    <textarea id="ausgabe" class="nur-offen" readonly aria-label="Daten für die App"></textarea>
+    <p class="leise nur-offen">In der App: oben auf „Satz … von …“ tippen → „Seite importieren“ → einfügen → „Importieren“. <a href="https://luperttrading-lab.github.io/latein-seneca/" target="_blank" rel="noopener">App öffnen</a></p>
+  </section>
+
+  <div class="knoepfe"><button class="btn2" id="neu">Neue Seite beginnen</button><span class="leise" id="neu-status"></span></div>
+</main>
+
+<script>
+'use strict';
+// Formale Prüfung von Satzdaten. Eine Quelle für App (Import), Werkstatt und Tests.
+// Findet Strukturfehler (fehlende Felder, Verweise ins Leere, falsche Typen) –
+// keine inhaltlichen Fehler in der Analyse.
+(function (wurzel) {
+  const PHASEN = ['gliedern', 'verb', 'subjekt', 'ergaenzung', 'bezug', 'konstr', 'falle', 'uebersetzen'];
+  const TYPEN = ['tippen', 'bezug', 'wahl', 'text'];
+  const ROLLE = /^[PSOATKV]\*?$/;
+  const WORTFELDER = ['t', 'l', 'b', 'f', 'fn', 'r', 'c'];
+  const istText = x => typeof x === 'string' && x.trim() !== '';
+
+  // 'wort' = erstes Vorkommen, 'wort#2' = zweites
+  function finde(s, ref) {
+    if (typeof ref !== 'string') return -1;
+    const [form, nr] = ref.split('#');
+    let n = Number(nr || 1);
+    for (let i = 0; i < s.w.length; i++) if (s.w[i].t === form && --n === 0) return i;
+    return -1;
+  }
+
+  const istEinleitewort = wd => typeof wd.r === 'string' && (wd.r.endsWith('*') || /leitet .* ein/.test(wd.fn || ''));
+
+  function pruefeSatz(s, ort = s && s.id || 'Satz') {
+    const fehler = [];
+    const f = t => fehler.push(`${ort}: ${t}`);
+    if (!s || typeof s !== 'object') { f('kein Objekt'); return fehler; }
+    for (const feld of ['id', 'ref', 'thema', 'woertlich', 'gut']) if (!istText(s[feld])) f(`${feld} fehlt`);
+    if (!Array.isArray(s.merke) || !s.merke.length || !s.merke.every(istText)) f('merke fehlt');
+    if (!Array.isArray(s.w) || !s.w.length) { f('Wortliste w fehlt'); return fehler; }
+    if (!s.teile || typeof s.teile !== 'object') { f('teile fehlt'); return fehler; }
+
+    s.w.forEach((wd, i) => {
+      if (!wd || typeof wd !== 'object') return f(`Token ${i + 1} ist kein Objekt`);
+      if ('p' in wd) { if (!istText(wd.p)) f(`Satzzeichen ${i + 1} leer`); return; }
+      for (const feld of WORTFELDER) {
+        if (feld === 'c' ? !(Number.isInteger(wd.c) || /^\d+$/.test(wd.c)) : !istText(wd[feld])) f(`${wd.t || 'Wort ' + (i + 1)}: Feld ${feld} fehlt`);
+      }
+      if (istText(wd.r) && !ROLLE.test(wd.r)) f(`${wd.t}: Rolle ${wd.r} unbekannt`);
+      if (wd.c !== undefined && !s.teile[wd.c]) f(`${wd.t}: Teilsatz ${wd.c} nicht in teile`);
+    });
+    const benutzt = new Set(s.w.filter(x => x && !('p' in x)).map(x => String(x.c)));
+    for (const [id, t] of Object.entries(s.teile)) {
+      if (!benutzt.has(id)) f(`Teilsatz ${id} ohne Wörter`);
+      if (!t || !Number.isInteger(t.lvl) || t.lvl < 0 || !istText(t.name)) f(`Teilsatz ${id}: lvl oder name fehlt`);
+    }
+
+    if (!Array.isArray(s.schritte) || !s.schritte.length) { f('schritte fehlen'); return fehler; }
+    s.schritte.forEach((st, k) => {
+      const o = `Schritt ${k + 1}`;
+      if (!st || typeof st !== 'object') return f(`${o} ist kein Objekt`);
+      if (!PHASEN.includes(st.ph)) f(`${o}: Phase ${st.ph} unbekannt`);
+      if (!TYPEN.includes(st.typ)) f(`${o}: Typ ${st.typ} unbekannt`);
+      if (!istText(st.frage)) f(`${o}: frage fehlt`);
+      for (const liste of ['ziel', 'auch']) {
+        if (st[liste] !== undefined && !(Array.isArray(st[liste]) && st[liste].every(istText))) f(`${o}: ${liste} ist keine Liste von Wörtern`);
+      }
+      if (st.falsch !== undefined && (typeof st.falsch !== 'object' || Array.isArray(st.falsch) || !Object.values(st.falsch).every(istText))) f(`${o}: falsch ungültig`);
+      const refs = [...(st.ziel || []), ...(st.auch || []), ...Object.keys(st.falsch || {})];
+      if (st.fokus !== undefined) refs.push(st.fokus);
+      for (const r of refs) if (finde(s, r) < 0) f(`${o}: Verweis „${r}“ nicht im Satz`);
+      if (st.typ === 'tippen' || st.typ === 'bezug') {
+        if (!st.ziel || !st.ziel.length) f(`${o}: ziel fehlt`);
+        if (!istText(st.erk)) f(`${o}: erk fehlt`);
+        for (const r of st.ziel || []) {
+          if ((st.auch || []).includes(r)) f(`${o}: ${r} steht in ziel und auch`);
+          if (st.falsch && r in st.falsch) f(`${o}: ${r} steht in ziel und falsch`);
+        }
+      }
+      if (st.typ === 'bezug' && !istText(st.fokus)) f(`${o}: fokus fehlt`);
+      if (st.ph === 'gliedern' && st.typ === 'tippen') {
+        for (const r of st.ziel || []) {
+          const i = finde(s, r);
+          if (i >= 0 && !istEinleitewort(s.w[i])) f(`${o}: ${r} ist Ziel beim Gliedern, aber nicht als Einleitewort markiert (r mit * oder fn „leitet … ein“)`);
+        }
+      }
+      if (st.typ === 'wahl') {
+        if (!Array.isArray(st.opts) || st.opts.length < 2 || !st.opts.every(istText)) f(`${o}: opts fehlen`);
+        else {
+          if (!(Number.isInteger(st.ok) && st.ok >= 0 && st.ok < st.opts.length)) f(`${o}: ok außerhalb der Optionen`);
+          if (st.warum !== undefined) {
+            if (!Array.isArray(st.warum) || st.warum.length !== st.opts.length) f(`${o}: warum muss so lang sein wie opts`);
+            else if (st.warum[st.ok] !== null) f(`${o}: warum an der richtigen Stelle muss null sein`);
+          }
+        }
+        if (!istText(st.erk)) f(`${o}: erk fehlt`);
+      }
+    });
+    if (s.schritte[s.schritte.length - 1]?.typ !== 'text') f('letzter Schritt ist nicht die Übersetzung (typ text)');
+    return fehler;
+  }
+
+  function pruefeText(text) {
+    const fehler = [];
+    if (!text || typeof text !== 'object') return ['Kein Text-Objekt.'];
+    if (!istText(text.id)) fehler.push('id fehlt');
+    if (!istText(text.titel)) fehler.push('titel fehlt');
+    if (!Array.isArray(text.saetze) || !text.saetze.length) return [...fehler, 'saetze fehlen'];
+    const ids = new Set();
+    text.saetze.forEach((s, i) => {
+      fehler.push(...pruefeSatz(s, `Satz ${i + 1}`));
+      if (s && ids.has(s.id)) fehler.push(`Satz ${i + 1}: id ${s.id} doppelt`);
+      if (s) ids.add(s.id);
+    });
+    return fehler;
+  }
+
+  wurzel.Pruefung = { finde, istEinleitewort, pruefeSatz, pruefeText };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+'use strict';
+const BEISPIEL = {"id":"s2","ref":"1,1","thema":"Seneca erklärt, warum das Ziel so schwer zu erreichen ist.","w":[{"t":"adeoque","l":"adeo + -que","b":"adeo: so sehr, so; -que: und","f":"Adverb + angehängtes -que","fn":"kündigt den ut-Satz an: adeo … ut = „so sehr …, dass“","r":"A","c":1},{"t":"non","l":"non","b":"nicht","f":"Negation","fn":"verneint facile","r":"A","c":1},{"t":"est","l":"esse, sum, fui","b":"sein","f":"3. Sg. Ind. Präs.","fn":"Prädikat (mit facile): „ist leicht“","r":"P","c":1},{"t":"facile","l":"facilis, facile","b":"leicht","f":"Nom. Sg. n.","fn":"Prädikatsnomen zu est – hier nicht das Adverb!","r":"P","c":1},{"t":"consequi","l":"consequi, consequor, consecutus sum (Deponens)","b":"erreichen, erlangen","f":"Inf. Präs. (Deponens)","fn":"Subjekt: „(das) Erreichen ist nicht leicht“","r":"S","c":1},{"t":"beatam","l":"beatus, beata, beatum","b":"glücklich","f":"Akk. Sg. f.","fn":"Attribut zu vitam","r":"T","c":1},{"t":"vitam","l":"vita, vitae f.","b":"Leben","f":"Akk. Sg.","fn":"Objekt zu consequi","r":"O","c":1},{"t":"ut","l":"ut","b":"mit Konj.: dass, damit; mit Ind.: wie, sobald","f":"Subjunktion","fn":"leitet den Konsekutivsatz ein (angekündigt durch adeo)","r":"K","c":2},{"t":"eo","l":"is, ea, id","b":"er, sie, es; dieser","f":"Abl. Sg. n. (Ablativ des Maßes)","fn":"eo … quo + Komparativ: „um so … je“","r":"A","c":2},{"t":"quisque","l":"quisque, quaeque, quidque","b":"jeder (einzelne)","f":"Nom. Sg. m.","fn":"Subjekt zu recedat","r":"S","c":2},{"t":"ab","l":"a/ab (Präp. + Abl.)","b":"von, von … her","f":"Präposition + Abl.","fn":"ab ea: „von ihm“ (dem glücklichen Leben)","r":"A","c":2},{"t":"ea","l":"is, ea, id","b":"er, sie, es","f":"Abl. Sg. f.","fn":"bezieht sich auf beatam vitam","r":"A","c":2},{"t":"longius","l":"longe (Komparativ: longius)","b":"weit; Komparativ: weiter","f":"Adverb im Komparativ","fn":"Adverbiale zu recedat","r":"A","c":2},{"t":"recedat","l":"recedere, recedo, recessi, recessum","b":"zurückweichen, sich entfernen","f":"3. Sg. Konj. Präs. Akt.","fn":"Prädikat des ut-Satzes – Konjunktiv wegen konsekutivem ut","r":"P","c":2},{"t":"quo","l":"qui, quae, quod","b":"um wie viel; mit Komparativ: je","f":"Abl. Sg. n. (Ablativ des Maßes)","fn":"leitet den Vergleichssatz ein – Gegenstück zu eo","r":"A*","c":3},{"t":"ad","l":"ad (Präp. + Akk.)","b":"zu, auf … zu","f":"Präposition + Akk.","fn":"ad illam: „auf es zu“","r":"A","c":3},{"t":"illam","l":"ille, illa, illud","b":"jener, jene, jenes","f":"Akk. Sg. f.","fn":"bezieht sich auf beatam vitam","r":"A","c":3},{"t":"concitatius","l":"concitate (Adverb zu concitatus)","b":"heftig, hastig; Komparativ: heftiger","f":"Adverb im Komparativ","fn":"Adverbiale zu fertur","r":"A","c":3},{"t":"fertur","l":"ferre, fero, tuli, latum","b":"tragen, bringen; Passiv: sich bewegen, eilen, stürmen","f":"3. Sg. Ind. Präs. Pass.","fn":"Prädikat; mediales Passiv: „eilt, stürmt“","r":"P","c":3},{"p":","},{"t":"si","l":"si","b":"wenn, falls","f":"Subjunktion","fn":"leitet den Bedingungssatz ein","r":"K","c":4},{"t":"via","l":"via, viae f.","b":"Weg, Straße","f":"Abl. Sg. (Ablativ der Trennung)","fn":"„vom Weg“ – nicht Subjekt!","r":"A","c":4},{"t":"lapsus","l":"labi, labor, lapsus sum (Deponens)","b":"gleiten, ausgleiten, abkommen","f":"Part. Perf. Nom. Sg. m. (Teil von lapsus est)","fn":"Prädikat (mit est): „ist abgekommen“","r":"P","c":4},{"t":"est","l":"esse, sum, fui","b":"sein","f":"3. Sg. Ind. Präs. – bildet mit lapsus das Perfekt","fn":"Prädikat: lapsus est = 3. Sg. Ind. Perf. (Deponens)","r":"P","c":4},{"p":";"}],"teile":{"1":{"lvl":0,"name":"HS","info":"Hauptsatz"},"2":{"lvl":1,"name":"GS 1° · Konsekutivsatz","info":"ut + Konj., angekündigt durch adeo: „so …, dass“"},"3":{"lvl":2,"name":"GS 2° · Vergleichssatz","info":"quo … (eo) + Komparativ: „je … um so“"},"4":{"lvl":2,"name":"GS 2° · Bedingungssatz","info":"si: „wenn“ – gehört zum ut-Satz"}},"schritte":[{"ph":"gliedern","typ":"tippen","frage":"Tippe alle Wörter an, die einen Gliedsatz einleiten.","ziel":["ut","quo","si"],"tipp":"Es sind drei. Eines davon hat einen „Partner“ weiter vorn im Satz.","falsch":{"adeoque":"adeo leitet nichts ein, es kündigt an: adeo … ut = „so sehr …, dass“. Merk dir das Wort als Signal!","eo":"eo ist das Gegenstück zu quo (eo … quo = um so … je), steht aber im ut-Satz und leitet nichts ein."},"erk":"ut leitet einen Konsekutivsatz ein (angekündigt durch adeo), quo einen Vergleichssatz (Partner: eo), si einen Bedingungssatz. Siehe Satzbild."},{"ph":"verb","typ":"tippen","frage":"Tippe alle Prädikate (finiten Verbformen) an.","ziel":["est","recedat","fertur","est#2"],"auch":["facile","lapsus"],"tipp":"Vier Teilsätze → vier Prädikate. Eines ist zusammengesetzt (Partizip + esse).","falsch":{"consequi":"Infinitiv – keine Personalendung. Er ist hier sogar das Subjekt: „(das) Erreichen ist nicht leicht“."},"erk":"est (mit facile), recedat, fertur, lapsus est. Bei lapsus est trägt est die Personalendung; zusammen ergeben sie das Perfekt."},{"ph":"verb","typ":"wahl","frage":"consequi und lapsus est sehen passiv aus. Wie übersetzt du sie?","opts":["passiv: „erreicht werden“, „ist geglitten worden“","aktiv: „erreichen“, „ist abgeglitten“ – beides sind Deponentien","je nach Zusammenhang"],"ok":1,"warum":["Das ergibt keinen Sinn – und das Wörterbuch zeigt: consequor, labor. Die 1. Person auf -or verrät das Deponens.",null,"Bei Deponentien gibt es nichts abzuwägen: Form passiv, Bedeutung aktiv."],"erk":"consequi (consequor) und labi (labor) sind Deponentien: passive Form, aktive Bedeutung. Darum lernst du Verben immer mit der 1. Person Singular – endet sie auf -or, ist es ein Deponens."},{"ph":"subjekt","typ":"tippen","frage":"Im ut-Satz: Wer entfernt sich? Tippe das Subjekt zu recedat an.","ziel":["quisque"],"tipp":"Gesucht ist ein Nominativ Singular im ut-Satz.","falsch":{"via":"via könnte Nominativ sein – steht aber im si-Satz. Und: Ein Weg entfernt sich nicht.","ea":"ea steht nach ab: Ablativ."},"erk":"quisque („jeder“) ist Subjekt von recedat – und bleibt es in den folgenden Gliedsätzen (fertur, lapsus est)."},{"ph":"bezug","typ":"bezug","fokus":"ea","frage":"Worauf beziehen sich die Pronomen ea und illam (beide f. Sg.)? Tippe das Bezugswort an.","ziel":["vitam"],"auch":["beatam"],"tipp":"Gesucht ist ein Femininum Singular weiter vorn – etwas, dem man sich nähern oder von dem man sich entfernen kann.","erk":"ea und illam meinen beide beatam vitam – das glückliche Leben. Pronomen führst du immer auf ihr Bezugswort zurück, sonst bleibt die Übersetzung nebulös."},{"ph":"konstr","typ":"wahl","frage":"adeo … ut + Konjunktiv: Welche Sinnrichtung hat der ut-Satz?","opts":["final: „damit“","konsekutiv: „(so sehr), dass“","konzessiv: „obwohl“"],"ok":1,"warum":["Final wäre ut ohne „so“-Wort davor. Hier steht adeo – das kündigt eine Folge an.",null,"Konzessives ut ist selten und steht nicht nach adeo."],"erk":"Ein „so“-Wort im übergeordneten Satz (adeo, ita, sic, tam, tantus, talis) kündigt ein konsekutives ut an: „so …, dass“. recedat steht deshalb im Konjunktiv – deutsch Indikativ."},{"ph":"konstr","typ":"wahl","frage":"eo … longius … quo … concitatius: Wie gibst du das wieder?","opts":["„dort weiter …, wo heftiger …“","„um so weiter …, je heftiger …“","„deshalb weiter …, weil heftiger …“"],"ok":1,"warum":["eo und quo sind hier keine Ortsangaben: Sie stehen bei Komparativen (longius, concitatius).",null,"Kausal wäre quod oder quia. quo + Komparativ misst einen Unterschied."],"erk":"eo/quo + Komparativ (Ablativ des Maßes) = „je … desto / um so“. Im Deutschen stellst du den je-Teil oft nach vorn: „je hastiger er darauf zueilt, um so weiter entfernt er sich“."},{"ph":"falle","typ":"wahl","frage":"si via lapsus est – ist via Nominativ oder Ablativ?","opts":["Nominativ: „wenn der Weg abgeglitten ist“","Ablativ: „wenn er vom Weg abgekommen ist“"],"ok":1,"warum":["lapsus ist maskulin, via feminin – das passt nicht zusammen. Und ein Weg gleitet nicht ab.",null],"erk":"Subjekt bleibt quisque – darum lapsus, maskulin! via ist Ablativ der Trennung: „vom Weg (ab)gekommen“. Regel: Bei -a immer Nominativ, Ablativ und Neutrum Plural gegeneinander prüfen – die Kongruenz entscheidet."},{"ph":"uebersetzen","typ":"text","frage":"Übersetze. Hilfe: adeo non facile = „so wenig leicht“ – in gutem Deutsch „so schwer“."}],"merke":["„So“-Wort (adeo, ita, tam, tantus …) + ut + Konjunktiv → konsekutiv: „so …, dass“.","eo … quo + Komparativ → „um so … je“.","Deponens (Wörterbuch: -or): passive Form, aktive Bedeutung."],"woertlich":"und so sehr ist es nicht leicht, das glückliche Leben zu erreichen, dass sich jeder um so weiter von ihm entfernt, um wie viel heftiger er zu ihm hin eilt, wenn er vom Weg abgeglitten ist;","gut":"Es ist sogar so schwer, das glückliche Leben zu erreichen, dass sich jeder um so weiter davon entfernt, je hastiger er darauf zueilt – sofern er vom Weg abgekommen ist."};
+const SPEICHER = 'werkstatt.v1';
+const $ = id => document.getElementById(id);
+
+// ───────── Zustand (nur im Browser dieses Geräts, für Unterbrechungen)
+const leer = () => ({ autor: 'Seneca', werk: '', stelle: '', unsicher: [], einheiten: [], phase: 1 });
+let st = (() => { try { return Object.assign(leer(), JSON.parse(localStorage.getItem(SPEICHER)) || {}); } catch (_) { return leer(); } })();
+const sichere = () => { try { localStorage.setItem(SPEICHER, JSON.stringify(st)); } catch (_) {} };
+
+let sample = null, downloads = null, grenzen = null;
+let fotos = [];
+const laufend = new Set();     // AbortController der laufenden Aufrufe
+
+// ───────── Texterkennung
+function promptErkennen(teile, nFotos, rohtext) {
+  const bildInfo = rohtext ? 'Der Text steht unten (eingefügt, nicht als Bild).'
+    : teile > 1
+      ? `Die ${nFotos * teile} Bilder zeigen ${nFotos === 1 ? 'eine Buchseite' : nFotos + ' Buchseiten'}, jede in ${teile} waagrechte Streifen von oben nach unten geschnitten, die sich leicht überlappen. Doppelt sichtbare Zeilen nur einmal übernehmen.`
+      : `Die Bilder zeigen ${nFotos === 1 ? 'eine Buchseite' : nFotos + ' Buchseiten'} in Reihenfolge.`;
+  return `Du hilfst beim Erstellen von Lernmaterial für eine Latein-Übersetzungs-App. ${bildInfo}
+
+Aufgabe: Gib ausschließlich den antiken lateinischen Text wieder. Übernimm nichts anderes – keine deutsche oder sonstige moderne Übersetzung, keine Einleitung, keine Anmerkungen, keine Seitenzahlen, keine Kolumnentitel. Steht auf der Seite kein lateinischer Text, gib leere "einheiten" und einen "hinweis" zurück.
+
+Regeln:
+- Schreibweise der Ausgabe genau beibehalten (z. B. adpetamus, inpellit, Satzzeichen, Großschreibung).
+- Silbentrennungen am Zeilenende zusammenfügen (quis- | que → quisque).
+- Kapitel- und Abschnittszahlen wie „1 (1)“ oder „(2)“ nicht in den Text übernehmen, sondern als Stellenangabe "ref" im Format "1,1", "1,2" den Einheiten zuordnen.
+- Zerlege den Text in Lerneinheiten: in der Regel ein Satz bis zum Punkt. Sehr lange Perioden an Strichpunkt oder Doppelpunkt teilen, wenn jeder Teil für sich übersetzbar bleibt (Richtwert höchstens 30 Wörter).
+- Bei unsicheren Lesungen das wahrscheinlichste Wort einsetzen und es in "unsicher" nennen.
+
+Antworte nur mit JSON in dieser Form:
+{"autor": "Seneca", "werk": "De vita beata", "stelle": "Kapitel 1, Abschnitt 1–2", "einheiten": [{"ref": "1,1", "text": "Vivere, Gallio frater, omnes beate volunt, …"}], "unsicher": [], "hinweis": ""}${rohtext ? '\n\nText:\n' + rohtext : ''}`;
+}
+
+// Fotos in waagrechte Streifen schneiden: die Plattform verkleinert jedes Bild auf etwa 1,2 Megapixel,
+// Streifen behalten so mehr Auflösung für die Schrift.
+async function streifen(datei, teile) {
+  const url = URL.createObjectURL(datei);
+  try {
+    const bild = await new Promise((ok, nein) => { const i = new Image(); i.onload = () => ok(i); i.onerror = nein; i.src = url; });
+    const b = bild.naturalWidth, h = bild.naturalHeight, ueber = Math.round(h * 0.06);
+    const skal = Math.min(1, 2400 / Math.max(b, h / teile));
+    const ergebnis = [];
+    for (let k = 0; k < teile; k++) {
+      const y0 = Math.max(0, Math.round(k * h / teile) - ueber), y1 = Math.min(h, Math.round((k + 1) * h / teile) + ueber);
+      const c = document.createElement('canvas');
+      c.width = Math.round(b * skal); c.height = Math.round((y1 - y0) * skal);
+      c.getContext('2d').drawImage(bild, 0, y0, b, y1 - y0, 0, 0, c.width, c.height);
+      ergebnis.push(await new Promise(ok => c.toBlob(ok, 'image/jpeg', 0.9)));
+    }
+    return ergebnis;
+  } finally { URL.revokeObjectURL(url); }
+}
+
+const MELDUNG = {
+  not_granted: 'Du hast Claude für diese Seite nicht freigegeben. Lade die Seite neu, um wieder gefragt zu werden.',
+  sampling_disabled: 'Claude ist für dieses Konto nicht verfügbar.',
+  rate_limited: 'Nutzungslimit erreicht. Fertige Sätze sind gespeichert – später hier weitermachen.',
+  session_expired: 'Bitte in claude.ai neu anmelden.',
+  image_rejected: 'Das Foto wurde nicht angenommen. Bitte ein anderes (JPEG oder PNG) wählen.',
+  images_unavailable: 'In dieser Ansicht gehen keine Fotos. Füge den Text stattdessen ein.',
+  refused: 'Claude hat diese Anfrage abgelehnt.',
+  invalid_json: 'Die Antwort war unvollständig.',
+  prompt_too_large: 'Zu viel Text auf einmal. Bitte weniger Einheiten.',
+  cancelled: 'Angehalten.',
+};
+const meldung = e => MELDUNG[e?.code] || 'Verbindungsfehler. Bitte noch einmal versuchen.';
+const endgueltig = c => ['not_granted', 'sampling_disabled', 'rate_limited', 'session_expired', 'not_declared', 'capability_disabled', 'capability_removed'].includes(c);
+
+async function erkennen() {
+  const roh = $('rohtext').value.trim();
+  if (!fotos.length && !roh) return;
+  const knopf = $('erkennen'); knopf.disabled = true;
+  $('s1-status').textContent = 'Claude liest den Text …';
+  const ctl = new AbortController(); laufend.add(ctl);
+  try {
+    let bilder = [], teile = 1;
+    if (fotos.length && !roh) {
+      const max = grenzen?.images?.maxCount || 1;
+      teile = Math.max(1, Math.min(3, Math.floor(max / fotos.length)));
+      for (const f of fotos) bilder.push(...await streifen(f, teile));
+    }
+    const opts = { modelTier: 'complex', signal: ctl.signal, onText: ({ text }) => { $('s1-status').textContent = `Claude schreibt … ${text.length} Zeichen`; } };
+    if (bilder.length) opts.images = bilder;
+    const a = await sample.json(promptErkennen(teile, fotos.length, roh || ''), opts);
+    const einheiten = Array.isArray(a?.einheiten) ? a.einheiten.filter(e => e && typeof e.text === 'string' && e.text.trim()) : [];
+    if (!einheiten.length) { $('s1-status').textContent = a?.hinweis || 'Kein lateinischer Text erkannt. Bitte ein schärferes Foto wählen.'; return; }
+    st = { ...leer(), autor: str(a.autor) || 'Seneca', werk: str(a.werk), stelle: str(a.stelle),
+      unsicher: Array.isArray(a.unsicher) ? a.unsicher.map(String).slice(0, 20) : [],
+      einheiten: einheiten.map(e => ({ ref: str(e.ref), text: e.text.trim(), status: 'offen', satz: null, fehler: [] })), phase: 2 };
+    sichere(); $('s1-status').textContent = `${st.einheiten.length} Einheiten erkannt.`;
+    zeige();
+    $('s2').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (e) {
+    $('s1-status').textContent = meldung(e);
+  } finally { laufend.delete(ctl); knopf.disabled = false; }
+}
+const str = x => (typeof x === 'string' ? x.trim() : '');
+
+// ───────── Analyse je Einheit
+const nurBuchstaben = t => t.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '');
+
+function promptAnalyse(i, vorige) {
+  const e = st.einheiten[i];
+  const kontext = st.einheiten.map((x, k) => `${k + 1}. [${x.ref}] ${x.text}`).join('\n');
+  let p = `Du bist ein erfahrener Lateinlehrer und erstellst Lernmaterial für eine Übersetzungs-App. Sie bringt Lernenden eine feste Methode bei: Gliedern → Prädikat → Subjekt → Ergänzungen → Bezüge (KNG) → Konstruktionen → Übersetzen. Ziel: Wer die App benutzt, lernt das Vorgehen und kann es später ohne App anwenden.
+
+Werk: ${st.autor}, ${st.werk} (${st.stelle})
+Die ganze Seite, damit du den Zusammenhang kennst:
+${kontext}
+
+Analysiere NUR Einheit ${i + 1} [${e.ref}]:
+${e.text}
+
+Gib genau ein JSON-Objekt zurück, aufgebaut wie dieses fertige Beispiel einer anderen Einheit derselben Schrift:
+${JSON.stringify(BEISPIEL)}
+
+Feldregeln:
+- "id": "s${i + 1}", "ref": "${e.ref}".
+- "thema": ein Satz Orientierung, ohne die Übersetzung vorwegzunehmen.
+- "w": alle Tokens in Textreihenfolge. Jedes Wort genau in der Schreibung der Einheit als {"t","l","b","f","fn","r","c"}, jedes Satzzeichen als {"p": ","}. Mehrteilige Subjunktionen wie "quam diu" oder "etiam si" dürfen ein Token sein; angehängtes -que bleibt am Wort.
+- "l": Wörterbuchform ohne Längenzeichen – Verben mit allen Stammformen (Deponentien mit „(Deponens)“), Substantive mit Genitiv und Genus, Adjektive mit allen Endungen.
+- "b": deutsche Bedeutungen, die hier passende zuerst.
+- "f": Bestimmung mit den Abkürzungen des Beispiels, z. B. "3. Sg. Ind. Präs. Akt.", "Akk. Sg. f.", "Inf. Präs. Akt.", "Part. Perf. (Deponens), Nom. Pl. m.", "PPP Nom. Pl. m.", "Part. Präs. Akt. (PPA), Gen. Pl.", "Part. Fut. Akt. (PFA), Nom. Pl. m.", "Gerundium, Akk.", "Gerundivum, Nom. Sg. n.", "Adverb", "Präposition + Akk.", "Subjunktion", "Konjunktion", "Negation".
+- "fn": Funktion im Satz, kurz, mit Bezugswort. Jedes Wort, das einen Gliedsatz einleitet, enthält in "fn" die Wendung „leitet … ein“.
+- "r": P Prädikat (auch Prädikatsnomen und Teile zusammengesetzter Prädikate), S Subjekt, O Objekt/Ergänzung, A Adverbiale (auch Präpositionen), T Attribut, K Konnektor/Subjunktion, V Anrede. Relativ- und Fragewörter, die einen Gliedsatz einleiten, bekommen ihre Satzgliedrolle plus "*" ("S*", "O*", "A*").
+- "c": Nummer des Teilsatzes. "teile": für jede verwendete Nummer {"lvl": Einrücktiefe (0 = Hauptsatz), "name": wie im Beispiel ("HS", "GS 1° · Relativsatz", "PC · Partizip Perfekt"), "info": kurze Erklärung}.
+- "schritte": 5 bis 9 Lernschritte in der Reihenfolge der Methode. Zuerst "gliedern" (Typ "tippen", "ziel" = alle Einleitewörter; gibt es keinen Gliedsatz, Typ "wahl" zur Satzstruktur). Dann "verb" (Typ "tippen", "ziel" = alle finiten Verbformen, "auch" = übrige Teile zusammengesetzter Prädikate). Dann je nach Satz "subjekt", "ergaenzung", "bezug" (Typ "bezug" mit "fokus"), "konstr", "falle" (Typ "wahl"). Zuletzt immer {"ph": "uebersetzen", "typ": "text", "frage": …}.
+  Verweise in "ziel", "auch", "fokus" und die Schlüssel von "falsch" nennen ein Wort genau wie in "t"; beim zweiten Vorkommen derselben Form "wort#2".
+  "wahl": 2–3 Optionen, "ok" = Index der richtigen, "warum" so lang wie "opts", an der Stelle "ok" null, sonst kurz, warum die Option falsch ist.
+  "falsch": typische Fehlgriffe mit Begründung. "tipp": Hilfe, die die Lösung nicht verrät. "erk": Erklärung nach dem Lösen, mit übertragbarer Regel.
+  Setze die Schwerpunkte dort, wo Lernende typischerweise scheitern: mehrdeutige Endungen, Konjunktive, Konstruktionen, Pronomenbezüge, Ellipsen, getrennt Stehendes.
+- "merke": 1–3 übertragbare Regeln. "woertlich" und "gut": deine eigenen Übersetzungen ins Deutsche, nah am Satzbau bzw. in gutem Deutsch.
+Prüfe jede Form im Zusammenhang der ganzen Seite. Antworte nur mit dem JSON-Objekt.`;
+  if (vorige) {
+    p += `\n\nDeine vorige Antwort auf genau diese Aufgabe hatte formale Fehler:\n- ${vorige.fehler.join('\n- ')}\n\nVorige Antwort:\n${JSON.stringify(vorige.satz)}\n\nGib das vollständige, korrigierte JSON-Objekt zurück.`;
+  }
+  return p;
+}
+
+function pruefeEinheit(i, s) {
+  const e = st.einheiten[i];
+  if (!s || typeof s !== 'object' || Array.isArray(s)) return ['Antwort ist kein JSON-Objekt'];
+  s.id = 's' + (i + 1); s.ref = e.ref;
+  const fehler = Pruefung.pruefeSatz(s, 'Einheit ' + (i + 1));
+  if (Array.isArray(s.w)) {
+    const woerter = nurBuchstaben(s.w.filter(x => x && typeof x.t === 'string').map(x => x.t).join(''));
+    if (woerter !== nurBuchstaben(e.text)) fehler.push(`Einheit ${i + 1}: Die Wörter in "w" weichen vom Text der Einheit ab – jedes Wort genau so übernehmen, wie es im Text steht.`);
+  }
+  return fehler;
+}
+
+async function analysiereEinheit(i, frisch) {
+  const e = st.einheiten[i];
+  e.status = 'laeuft'; e.fehler = []; e.info = 'Claude denkt nach …'; zeigeListe();
+  const ctl = new AbortController(); laufend.add(ctl);
+  const opts = (rund) => {
+    const o = { modelTier: 'complex', signal: ctl.signal,
+      onText: ({ text }) => { e.info = `${rund ? 'korrigiert' : 'schreibt'} … ${text.length.toLocaleString('de-DE')} Zeichen`; zeigeListe(); } };
+    if (frisch || rund > 0) o.cache = false;   // „Nochmal“ und Nachbesserung sollen wirklich neu fragen
+    return o;
+  };
+  try {
+    let satz = await sample.json(promptAnalyse(i), opts(0));
+    let fehler = pruefeEinheit(i, satz);
+    if (fehler.length) {                       // eine gezielte Nachbesserung, nicht mehr
+      e.info = 'Formfehler gefunden, Claude bessert nach …'; zeigeListe();
+      satz = await sample.json(promptAnalyse(i, { fehler: fehler.slice(0, 15), satz }), opts(1));
+      fehler = pruefeEinheit(i, satz);
+    }
+    if (fehler.length) { e.status = 'fehler'; e.fehler = fehler.slice(0, 4); e.satz = null; }
+    else { e.status = 'fertig'; e.satz = satz; }
+  } catch (err) {
+    e.status = err?.code === 'cancelled' ? 'offen' : 'fehler';
+    e.fehler = err?.code === 'cancelled' ? [] : [meldung(err)];
+    if (endgueltig(err?.code)) throw err;
+  } finally {
+    laufend.delete(ctl); e.info = ''; sichere(); zeigeListe();
+  }
+}
+
+let analyseLaeuft = false;
+async function analysiereAlle(nur) {
+  if (analyseLaeuft) return;
+  analyseLaeuft = true; st.phase = Math.max(st.phase, 3); sichere(); zeige();
+  const offen = st.einheiten.map((e, i) => i).filter(i => (nur ? i === nur.i : st.einheiten[i].status !== 'fertig'));
+  let abbruch = null;
+  const arbeiter = async () => {             // zwei Sätze gleichzeitig; die Plattform reiht weitere ein
+    while (offen.length && !abbruch) {
+      const i = offen.shift();
+      try { await analysiereEinheit(i, !!nur); } catch (err) { abbruch = err; }
+    }
+  };
+  await Promise.all([arbeiter(), arbeiter()]);
+  analyseLaeuft = false;
+  if (abbruch) $('s4-status').textContent = meldung(abbruch);
+  if (st.einheiten.every(e => e.status === 'fertig')) st.phase = 4;
+  sichere(); zeige();
+  if (st.phase === 4) $('s4').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ───────── Ergebnis
+function textObjekt() {
+  const titel = st.werk || 'Neuer Text';
+  const slug = titel.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'text';
+  return {
+    id: `${slug}-${Date.now().toString(36)}`, autor: st.autor || 'Seneca', titel, untertitel: st.stelle,
+    auto: true, erstellt: new Date().toISOString().slice(0, 10),
+    saetze: st.einheiten.map(e => e.satz),
+  };
+}
+
+// ───────── Darstellung
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const STATUS = { offen: 'wartet', laeuft: 'läuft', fertig: 'fertig ✓', fehler: 'Fehler' };
+
+function zeigeEinheiten() {
+  $('autor').value = st.autor; $('werk').value = st.werk; $('stelle').value = st.stelle;
+  $('unsicher').hidden = !st.unsicher.length;
+  $('unsicher').textContent = st.unsicher.length ? 'Unsicher gelesen, bitte besonders prüfen: ' + st.unsicher.join(', ') : '';
+  $('einheiten').innerHTML = st.einheiten.map((e, i) => `<li class="einheit">
+      <div class="ekopf">Einheit ${i + 1} · Stelle <input type="text" data-feld="ref" data-i="${i}" value="${esc(e.ref)}" aria-label="Stelle Einheit ${i + 1}">
+        <button class="weg" data-weg="${i}" type="button">Entfernen</button></div>
+      <textarea class="latein" rows="3" data-feld="text" data-i="${i}" aria-label="Text Einheit ${i + 1}">${esc(e.text)}</textarea></li>`).join('');
+  document.querySelectorAll('#einheiten textarea').forEach(hoehe);
+  const fertig = st.einheiten.filter(e => e.status === 'fertig').length;
+  $('analysieren').textContent = fertig ? `Weiter analysieren (${st.einheiten.length - fertig} offen)` : `Analysieren (${st.einheiten.length} Sätze)`;
+}
+function hoehe(t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 4 + 'px'; }
+
+function zeigeListe() {
+  $('fortschritt').innerHTML = st.einheiten.map((e, i) => `<li>
+      <span class="snr">${i + 1}</span><span class="sanf">${esc(e.text)}</span>
+      <span class="sstat s-${e.status}">${e.info || STATUS[e.status]}${e.status === 'fehler' && !analyseLaeuft ? ` <button class="btn2" data-nochmal="${i}" type="button">Nochmal</button>` : ''}</span>
+      ${e.fehler?.length ? `<span class="smeld">${e.fehler.map(esc).join('<br>')}</span>` : ''}</li>`).join('');
+  const offen = st.einheiten.some(e => e.status !== 'fertig');
+  $('stopp').hidden = !analyseLaeuft;
+  $('weiter').hidden = analyseLaeuft || !offen || st.phase < 3;
+}
+
+function zeigeErgebnis() {
+  if (st.phase < 4) return;
+  const t = textObjekt();
+  const fehler = Pruefung.pruefeText(t);
+  const json = JSON.stringify(t);
+  $('ergebnis').hidden = false;
+  $('ergebnis').className = 'ergebnis ' + (fehler.length ? 'schlecht' : 'gut');
+  $('ergebnis').innerHTML = fehler.length
+    ? 'Die Daten haben noch Fehler:<br>' + fehler.slice(0, 5).map(esc).join('<br>')
+    : `<b>${esc(t.titel)}</b>${t.untertitel ? ', ' + esc(t.untertitel) : ''} – ${t.saetze.length} Sätze, ${(json.length / 1024).toFixed(0)} KB. Bereit für die App.`;
+  $('ausgabe').value = fehler.length ? '' : json;
+  $('kopieren').disabled = !!fehler.length;
+  $('sichern').disabled = !!fehler.length;
+}
+
+function zeige() {
+  for (const n of [2, 3, 4]) $('s' + n).classList.toggle('zu', st.phase < n);
+  if (st.phase >= 2) zeigeEinheiten();
+  if (st.phase >= 3) zeigeListe();
+  zeigeErgebnis();
+  $('erkennen').disabled = !sample || (!fotos.length && !$('rohtext').value.trim());
+}
+
+// ───────── Ereignisse
+$('foto').addEventListener('change', e => {
+  fotos = [...e.target.files].slice(0, 2);
+  $('vorschau').innerHTML = '';
+  for (const f of fotos) { const img = document.createElement('img'); img.alt = 'Vorschau'; img.src = URL.createObjectURL(f); $('vorschau').append(img); }
+  zeige();
+});
+$('rohtext').addEventListener('input', zeige);
+$('erkennen').addEventListener('click', erkennen);
+$('analysieren').addEventListener('click', () => analysiereAlle());
+$('weiter').addEventListener('click', () => analysiereAlle());
+$('stopp').addEventListener('click', () => { for (const c of laufend) c.abort(); });
+
+$('einheiten').addEventListener('input', e => {
+  const i = Number(e.target.dataset.i), feld = e.target.dataset.feld;
+  if (!feld || !st.einheiten[i]) return;
+  st.einheiten[i][feld] = e.target.value;
+  st.einheiten[i].status = 'offen'; st.einheiten[i].satz = null;   // geänderter Text → neu analysieren
+  if (feld === 'text') hoehe(e.target);
+  if (st.phase > 2) st.phase = 3;
+  sichere();
+});
+document.querySelectorAll('.felder input').forEach(inp => inp.addEventListener('input', () => { st[inp.id] = inp.value; sichere(); }));
+$('einheiten').addEventListener('click', e => {
+  const i = e.target.dataset.weg;
+  if (i === undefined) return;
+  st.einheiten.splice(Number(i), 1); sichere(); zeige();
+});
+$('fortschritt').addEventListener('click', e => {
+  const i = e.target.dataset.nochmal;
+  if (i !== undefined) analysiereAlle({ i: Number(i) });
+});
+
+$('kopieren').addEventListener('click', async () => {
+  const json = $('ausgabe').value;
+  try { await navigator.clipboard.writeText(json); $('s4-status').textContent = 'Kopiert. Jetzt in der App einfügen.'; }
+  catch (_) {
+    $('ausgabe').focus(); $('ausgabe').select();
+    $('s4-status').textContent = 'Markiert – jetzt über das Menü „Kopieren“ wählen.';
+  }
+});
+$('sichern').addEventListener('click', async () => {
+  try {
+    await downloads.save({ filename: `${(st.werk || 'text').replace(/[^\wäöüÄÖÜß-]+/g, '-')}.json`, data: $('ausgabe').value });
+    $('s4-status').textContent = 'Gesichert.';
+  } catch (e) { if (e?.code !== 'declined') $('s4-status').textContent = 'Sichern geht hier nicht – nutze „Kopieren“.'; }
+});
+$('neu').addEventListener('click', e => {
+  if (e.target.dataset.sicher !== '1') {
+    e.target.dataset.sicher = '1'; e.target.textContent = 'Wirklich alles verwerfen?';
+    $('neu-status').textContent = 'Erneut tippen zum Bestätigen.'; return;
+  }
+  e.target.dataset.sicher = ''; e.target.textContent = 'Neue Seite beginnen'; $('neu-status').textContent = '';
+  st = leer(); fotos = []; $('vorschau').innerHTML = ''; $('foto').value = ''; $('rohtext').value = '';
+  $('s1-status').textContent = ''; $('s4-status').textContent = ''; $('ergebnis').hidden = true;
+  sichere(); zeige(); window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// ───────── Start: Fähigkeiten holen, gespeicherten Stand zeigen
+zeige();
+(async () => {
+  const use = n => (window.claude && window.claude.use ? window.claude.use(n) : Promise.resolve(null));
+  sample = await use('sample');
+  downloads = await use('downloads');
+  if (!sample) { $('fehlt').hidden = false; $('erkennen').disabled = true; $('analysieren').disabled = true; return; }
+  grenzen = await sample.limits().catch(() => null);
+  if (!grenzen?.images) { $('foto-label').hidden = true; $('s1').querySelector('details').open = true; }
+  $('sichern').hidden = !downloads;
+  // Ein unterbrochener Lauf (Seite neu geladen) gilt als wartend
+  st.einheiten.forEach(e => { if (e.status === 'laeuft') e.status = 'offen'; });
+  zeige();
+})();
+</script>

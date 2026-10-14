@@ -16,12 +16,12 @@
 <link rel="stylesheet" href="style.css">
 <title>Seneca übersetzen</title>
 <script>
-const APP_VERSION = '1.0';          // bei JEDER Änderung hochzählen
+const APP_VERSION = '1.1';          // bei JEDER Änderung hochzählen
 </script>
 </head>
 <body>
 <header class="kopf">
-  <div class="werk"><span class="autor">Seneca</span> <span class="schrift">De vita beata</span></div>
+  <div class="werk"><span class="autor" id="autor">Seneca</span> <span class="schrift" id="schrift">De vita beata</span></div>
   <button class="version" id="version" type="button" aria-label="Nach Update suchen"></button>
 </header>
 
@@ -41,6 +41,7 @@ const APP_VERSION = '1.0';          // bei JEDER Änderung hochzählen
   <button class="btn" id="update-go" type="button">Jetzt laden</button>
 </div>
 
+<script src="pruefung.js"></script>
 <script src="daten.js"></script>
 <script src="app.js"></script>
 </body>

@@ -245,6 +245,25 @@ textarea:focus { outline: none; border-color: var(--akzent); }
 .uliste .hier { color: var(--akzent); }
 .gesamt { font-size: 15px; white-space: pre-wrap; }
 
+.auto { font-size: 13px; color: var(--leise); border-left: 3px solid var(--a); padding: 2px 0 2px 8px; margin: 0 0 8px; }
+
+/* Texte und Import */
+.tliste { list-style: none; padding: 0; margin: 0 0 6px; }
+.tliste li { display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--linie); }
+.tliste li.hier .ttitel { color: var(--akzent); }
+.twahl {
+  flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 10px 2px; cursor: pointer;
+  display: grid; grid-template-columns: 1fr auto; gap: 0 10px;
+}
+.ttitel { font-family: var(--serif); font-size: 18px; font-weight: 600; }
+.tunter { grid-column: 1; font-size: 13px; color: var(--leise); }
+.tstand { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-size: 14px; color: var(--leise); font-variant-numeric: tabular-nums; }
+.vweg.warnen { color: var(--p); font-size: 14px; font-weight: 600; }
+.anleitung { padding-left: 20px; margin: 6px 0 12px; }
+.anleitung a { color: var(--akzent); }
+.datei { display: inline-block; cursor: pointer; }
+.datei input { display: block; margin-top: 6px; font-size: 13px; max-width: 100%; }
+
 /* Methode & Vokabeln */
 h2 { font-family: var(--serif); font-size: 24px; margin: 8px 0 6px; }
 h3 { font-size: 17px; margin: 18px 0 6px; }

@@ -1,9 +1,10 @@
 'use strict';
-/* Übersetzungshilfe Seneca – Logik. Daten kommen aus daten.js (TEXTE). */
+/* Übersetzungshilfe Seneca – Logik. Daten: daten.js (TEXTE, eingebaut) und importierte Seiten. */
 
-const TEXT = TEXTE[0];
-const SAETZE = TEXT.saetze;
 const SPEICHER = 'seneca.stand';
+const IMPORT_SPEICHER = 'seneca.importe';
+// Import-Werkstatt in claude.ai: macht aus einem Foto eine importierbare Seite
+const WERKSTATT = 'https://claude.ai/artifact/EM8QYEVRPWn95FFsMkh4tx';
 
 const ROLLEN = { P: 'Prädikat', S: 'Subjekt', O: 'Objekt / Ergänzung', A: 'Adverbiale', T: 'Attribut', K: 'Konnektor / Einleitewort', V: 'Anrede' };
 const LEGENDE = { P: 'Prädikat', S: 'Subjekt', O: 'Objekt', A: 'Adverbiale', T: 'Attribut', K: 'Konnektor', V: 'Anrede' };
@@ -33,37 +34,55 @@ const KONTROLLE = [
   'Ergibt der Satz im Zusammenhang Sinn?',
 ];
 
-// ───────────────────────────── Vorbereitung der Daten
-function finde(s, ref) {
-  const [form, nr] = ref.split('#');
-  let n = Number(nr || 1);
-  for (let i = 0; i < s.w.length; i++) if (s.w[i].t === form && --n === 0) return i;
-  console.warn('Verweis nicht gefunden:', s.id, ref);
-  return -1;
-}
-for (const s of SAETZE) {
-  for (const wd of s.w) {
-    if (wd.p) continue;
-    wd.rolle = wd.r[0];
-    wd.einl = wd.r.endsWith('*') || /leitet .* ein/.test(wd.fn);
-  }
-  for (const st of s.schritte) {
-    st._ziel = (st.ziel || []).map(r => finde(s, r));
-    st._auch = (st.auch || []).map(r => finde(s, r));
-    st._falsch = new Map(Object.entries(st.falsch || {}).map(([r, t]) => [finde(s, r), t]));
-    st._fokus = st.fokus ? finde(s, st.fokus) : -1;
+// ───────────────────────────── Texte: eingebaute und importierte
+const finde = Pruefung.finde;
+function bereite(text) {
+  if (text._bereit) return;
+  text._bereit = true;
+  for (const s of text.saetze) {
+    for (const wd of s.w) {
+      if (wd.p) continue;
+      wd.rolle = wd.r[0];
+      wd.einl = Pruefung.istEinleitewort(wd);
+    }
+    for (const st of s.schritte) {
+      st._ziel = (st.ziel || []).map(r => finde(s, r));
+      st._auch = (st.auch || []).map(r => finde(s, r));
+      st._falsch = new Map(Object.entries(st.falsch || {}).map(([r, t]) => [finde(s, r), t]));
+      st._fokus = st.fokus ? finde(s, st.fokus) : -1;
+    }
   }
 }
 
+// Importierte Texte liegen als JSON-Zeichenketten im Speicher (unverändert, ohne Laufzeitfelder)
+let importRoh = [];
+try { importRoh = JSON.parse(localStorage.getItem(IMPORT_SPEICHER)) || []; } catch (_) {}
+const ALLE = [...TEXTE];
+for (const roh of importRoh) {
+  try { const t = JSON.parse(roh); if (!Pruefung.pruefeText(t).length) ALLE.push(t); } catch (_) {}
+}
+ALLE.forEach(bereite);
+let TEXT = null, SAETZE = [];
+
 // ───────────────────────────── Zustand
 function neuerStand() {
-  return { satz: 0, tab: 'text', modus: {}, fort: {}, ueb: {}, haken: {}, vok: {}, alle: {} };
+  return { text: null, pos: {}, satz: 0, tab: 'text', modus: {}, fort: {}, ueb: {}, haken: {}, vok: {}, alle: {} };
 }
 let stand = (() => {
   try { return Object.assign(neuerStand(), JSON.parse(localStorage.getItem(SPEICHER)) || {}); }
   catch (_) { return neuerStand(); }
 })();
-if (!(stand.satz >= 0 && stand.satz < SAETZE.length)) stand.satz = 0;
+if (!stand.text) stand.pos[TEXTE[0].id] = stand.satz;   // Stand aus Version 1.0 übernehmen
+
+function waehleText(id) {
+  if (TEXT) stand.pos[TEXT.id] = stand.satz;
+  TEXT = ALLE.find(t => t.id === id) || ALLE[0];
+  SAETZE = TEXT.saetze;
+  stand.text = TEXT.id;
+  stand.satz = stand.pos[TEXT.id] ?? 0;
+  if (!(stand.satz >= 0 && stand.satz < SAETZE.length)) stand.satz = 0;
+}
+waehleText(stand.text);
 
 let speicherTimer = null;
 function speichere() { clearTimeout(speicherTimer); speicherTimer = setTimeout(speichereAlles, 250); }
@@ -153,6 +172,7 @@ function renderText() {
     <button data-act="modus" data-m="selbst" class="${modus() === 'selbst' ? 'an' : ''}">Selbstständig</button>
   </div>
   <p class="thema"><b>Worum geht’s:</b> ${esc(s.thema)}</p>`;
+  if (TEXT.auto) h += '<p class="auto">Automatisch erstellt – niemand hat diese Analysen von Hand geprüft. Kommt dir etwas falsch vor, prüf es im Wörterbuch.</p>';
 
   if (stand.satz > 0) {
     const v = SAETZE[stand.satz - 1].w;
@@ -284,7 +304,8 @@ function renderCheckliste() {
 
 // ───────────────────────────── Darstellung: Methode
 function renderMethode() {
-  const gesammelt = SAETZE.filter(s => stand.fort[s.id]?.fertig);
+  const gesammelt = ALLE.flatMap(t => t.saetze.filter(s => stand.fort[s.id]?.fertig)
+    .map(s => ({ s, wo: (ALLE.length > 1 ? t.titel + ', ' : '') + 'Satz ' + (t.saetze.indexOf(s) + 1) })));
   $('haupt').innerHTML = `
   <h2>Die Methode</h2>
   <p>Von links nach rechts Wort für Wort zu raten, scheitert an jedem langen Satz. Gute Übersetzer gehen immer in derselben Reihenfolge vor – so lange, bis es automatisch läuft. Genau diese Reihenfolge übt die App mit dir.</p>
@@ -344,7 +365,7 @@ function renderMethode() {
   </ol>
 
   <h3>Deine Merksätze</h3>
-  ${gesammelt.length ? '<ul>' + gesammelt.flatMap(s => s.merke.map(m => `<li>${esc(m)} <span class="leise">(Satz ${SAETZE.indexOf(s) + 1})</span></li>`)).join('') + '</ul>'
+  ${gesammelt.length ? '<ul>' + gesammelt.flatMap(({ s, wo }) => s.merke.map(m => `<li>${esc(m)} <span class="leise">(${esc(wo)})</span></li>`)).join('') + '</ul>'
     : '<p class="leise">Sobald du einen Satz abschließt, sammeln sich hier seine Merksätze.</p>'}
 
   <p class="hinweis">Analysen und Übersetzungen wurden mit Claude erstellt. Wenn dir eine Analyse falsch vorkommt: Wörterbuch und Grammatik gegenprüfen und Bescheid geben.</p>`;
@@ -359,7 +380,7 @@ function renderVokabeln() {
     ${eintraege.length ? `<div class="knoepfe" style="margin:10px 0"><button class="btn voll" data-act="abfrage">Abfragen (${eintraege.length})</button></div>` : ''}
     ${eintraege.length ? eintraege.map(([key, v]) => `<div class="vzeile"><div class="vtext">
         <div class="vlemma">${esc(v.l)}</div><div>${esc(v.b)}</div>
-        <div class="vmeta">im Text: ${esc(v.form)} · Satz ${v.satz}${v.gewusst >= 3 ? ' · <span class="sitzt">sitzt ✓</span>' : v.gewusst ? ` · ${v.gewusst}× gewusst` : ''}</div></div>
+        <div class="vmeta">im Text: ${esc(v.form)} · ${v.werk ? esc(v.werk) + ', ' : ''}Satz ${v.satz}${v.gewusst >= 3 ? ' · <span class="sitzt">sitzt ✓</span>' : v.gewusst ? ` · ${v.gewusst}× gewusst` : ''}</div></div>
         <button class="vweg" data-act="vok-weg" data-key="${esc(key)}" aria-label="Entfernen">✕</button></div>`).join('')
       : '<p>Noch leer. Tippe im Text auf ein Wort, um es nachzuschlagen.</p>'}`;
 }
@@ -384,6 +405,8 @@ function renderAbfrage() {
 }
 
 function render() {
+  $('autor').textContent = TEXT.autor || 'Seneca';
+  $('schrift').textContent = TEXT.titel;
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('an', b.dataset.tab === stand.tab));
   if (stand.tab === 'methode') renderMethode();
   else if (stand.tab === 'vokabeln') renderVokabeln();
@@ -410,7 +433,7 @@ function schliesseBlatt() {
 function zeigeWort(i) {
   const s = satz(), wd = s.w[i], key = lemmaKey(wd);
   if (!stand.vok[key]) {
-    stand.vok[key] = { l: wd.l, b: wd.b, form: wd.t, satz: stand.satz + 1, zeit: Date.now(), gewusst: 0 };
+    stand.vok[key] = { l: wd.l, b: wd.b, form: wd.t, werk: TEXT.titel, satz: stand.satz + 1, zeit: Date.now(), gewusst: 0 };
     speichere();
   }
   const offen = fort().fertig || sitzung.aufgedeckt.has(s.id + ':' + i);
@@ -425,9 +448,23 @@ function zeigeWort(i) {
     <button class="btn voll" data-act="schliessen" style="margin-top:6px">Schließen</button>`);
 }
 
+function fortschritt(t) {
+  return t.saetze.filter(s => stand.fort[s.id]?.fertig).length;
+}
+function textListe() {
+  if (ALLE.length < 2) return '';
+  return '<h3>Deine Texte</h3><ul class="tliste">' + ALLE.map(t => {
+    const hier = t.id === TEXT.id, eigen = !TEXTE.includes(t);
+    return `<li class="${hier ? 'hier' : ''}"><button class="twahl" data-act="text" data-id="${esc(t.id)}">
+        <span class="ttitel">${esc(t.titel)}</span><span class="tunter">${esc(t.untertitel || '')}${t.auto ? ' · automatisch erstellt' : ''}</span>
+        <span class="tstand">${fortschritt(t)} / ${t.saetze.length}</span></button>
+      ${eigen ? `<button class="vweg" data-act="text-weg" data-id="${esc(t.id)}" aria-label="Text entfernen">✕</button>` : ''}</li>`;
+  }).join('') + '</ul>';
+}
+
 function zeigeUebersicht() {
   const gesamt = SAETZE.map(s => (stand.ueb[s.id] || '').trim()).filter(Boolean).join(' ');
-  oeffneBlatt(`<h2>${esc(TEXT.titel)}</h2><p class="leise">${esc(TEXT.untertitel)}</p>
+  oeffneBlatt(`${textListe()}<h2>${esc(TEXT.titel)}</h2><p class="leise">${esc(TEXT.untertitel || '')}</p>
     <ul class="uliste">${SAETZE.map((s, k) => {
       const f = stand.fort[s.id], anf = s.w.filter(x => !x.p).slice(0, 5).map(x => x.t).join(' ');
       const st = f?.fertig ? '✓' : f && Object.keys(f.g).length ? '…' : '';
@@ -436,8 +473,56 @@ function zeigeUebersicht() {
     <h3>Deine Übersetzung</h3>
     <p class="gesamt">${gesamt ? esc(gesamt) : '<span class="leise">Noch leer.</span>'}</p>
     <div class="knoepfe" style="margin-top:14px">
+      <button class="btn2" data-act="import">Seite importieren</button>
       <button class="btn2" data-act="reset-satz">Satz ${stand.satz + 1} neu beginnen</button>
       <button class="btn rechts" data-act="schliessen">Schließen</button></div>`);
+}
+
+function zeigeImport(meldung = '') {
+  oeffneBlatt(`<h2>Seite importieren</h2>
+    <ol class="anleitung">
+      <li>${WERKSTATT ? `In der <a href="${WERKSTATT}" target="_blank" rel="noopener">Import-Werkstatt</a>` : 'In der Import-Werkstatt'} (claude.ai) das Foto einer Buchseite analysieren lassen.</li>
+      <li>Dort „Kopieren“ tippen, hier ins Feld einfügen, „Importieren“ tippen.</li>
+    </ol>
+    <textarea id="import-feld" placeholder="Hier einfügen …" autocomplete="off" spellcheck="false"></textarea>
+    <label class="btn2 datei">Oder Datei wählen (.json)<input type="file" id="import-datei" accept=".json,application/json,text/plain"></label>
+    ${meldung ? `<div class="rueck">${meldung}</div>` : ''}
+    <div class="knoepfe" style="margin-top:12px"><button class="btn" data-act="importieren">Importieren</button>
+      <button class="btn2 rechts" data-act="schliessen">Abbrechen</button></div>`);
+}
+
+// Liefert null bei Erfolg, sonst eine Fehlermeldung (HTML)
+function importiere(roh) {
+  let t;
+  try { t = JSON.parse(String(roh).trim()); } catch (_) {
+    return 'Das ist kein vollständiger Text aus der Werkstatt. Bitte dort noch einmal „Kopieren“ tippen und alles einfügen.';
+  }
+  const fehler = Pruefung.pruefeText(t);
+  if (fehler.length) {
+    return 'Nicht übernommen – der Text hat formale Fehler:<br>' + fehler.slice(0, 6).map(esc).join('<br>') +
+      (fehler.length > 6 ? `<br>… und ${fehler.length - 6} weitere.` : '');
+  }
+  if (ALLE.some(x => x.id === t.id)) t.id += '-' + Date.now().toString(36);
+  t.saetze.forEach(s => { s.id = `${t.id}/${s.id}`; });   // Fortschritt je Text getrennt halten
+  if (t.auto !== false) t.auto = true;
+  importRoh.push(JSON.stringify(t));
+  try { localStorage.setItem(IMPORT_SPEICHER, JSON.stringify(importRoh)); }
+  catch (_) { importRoh.pop(); return 'Der Speicher auf diesem Gerät ist voll. Entferne zuerst einen älteren importierten Text.'; }
+  bereite(t); ALLE.push(t);
+  waehleText(t.id); neueSitzung(); speichereAlles();
+  return null;
+}
+
+function entferneText(id) {
+  const t = ALLE.find(x => x.id === id);
+  if (!t || TEXTE.includes(t)) return;
+  importRoh = importRoh.filter(roh => { try { return JSON.parse(roh).id !== id; } catch (_) { return false; } });
+  try { localStorage.setItem(IMPORT_SPEICHER, JSON.stringify(importRoh)); } catch (_) {}
+  ALLE.splice(ALLE.indexOf(t), 1);
+  for (const s of t.saetze) for (const feld of ['fort', 'ueb', 'haken', 'alle', 'modus']) delete stand[feld][s.id];
+  delete stand.pos[id];
+  if (TEXT === t) { TEXT = null; waehleText(TEXTE[0].id); }
+  neueSitzung(); speichereAlles();
 }
 
 // ───────────────────────────── Aktionen
@@ -483,7 +568,7 @@ function pruefe() {
 
 function wechsleSatz(k) {
   if (k < 0 || k >= SAETZE.length) return;
-  stand.satz = k; neueSitzung(); sitzung.satzbildOffen = null;
+  stand.satz = k; stand.pos[TEXT.id] = k; neueSitzung(); sitzung.satzbildOffen = null;
   speichere(); render(); window.scrollTo(0, 0);
 }
 
@@ -520,6 +605,20 @@ document.addEventListener('click', e => {
     case 'vor': return wechsleSatz(stand.satz + 1);
     case 'uebersicht': return zeigeUebersicht();
     case 'springe': schliesseBlatt(); return wechsleSatz(Number(el.dataset.k));
+    case 'text':
+      waehleText(el.dataset.id); neueSitzung(); speichereAlles(); render();
+      window.scrollTo(0, 0); return zeigeUebersicht();
+    case 'text-weg':
+      // Zweistufig: erst nachfragen, dann entfernen (confirm() gibt es in Web-Apps nicht zuverlässig)
+      if (el.dataset.sicher !== '1') { el.dataset.sicher = '1'; el.textContent = 'Entfernen?'; el.classList.add('warnen'); return; }
+      entferneText(el.dataset.id); render(); return zeigeUebersicht();
+    case 'import': return zeigeImport();
+    case 'importieren': {
+      const fehler = importiere($('import-feld').value);
+      if (fehler) return zeigeImport(fehler);
+      schliesseBlatt(); stand.tab = 'text'; render(); window.scrollTo(0, 0);
+      return showInfo('Importiert: ' + TEXT.titel + ' – ' + SAETZE.length + ' Sätze', 4);
+    }
     case 'schliessen': return schliesseBlatt();
     case 'modus': stand.modus[s.id] = el.dataset.m; neueSitzung(); speichere(); return render();
     case 'nachschlagen': sitzung.nachschlagen = el.dataset.v === '1'; return render();
@@ -550,7 +649,7 @@ document.addEventListener('click', e => {
     case 'stern': {
       const wd = s.w[Number(el.dataset.i)], key = lemmaKey(wd);
       if (stand.vok[key]) delete stand.vok[key];
-      else stand.vok[key] = { l: wd.l, b: wd.b, form: wd.t, satz: stand.satz + 1, zeit: Date.now(), gewusst: 0 };
+      else stand.vok[key] = { l: wd.l, b: wd.b, form: wd.t, werk: TEXT.titel, satz: stand.satz + 1, zeit: Date.now(), gewusst: 0 };
       speichere();
       el.classList.toggle('an', !!stand.vok[key]);
       el.textContent = stand.vok[key] ? '★ in Vokabeln' : '☆ merken';
@@ -583,6 +682,12 @@ document.addEventListener('click', e => {
 });
 
 document.addEventListener('change', e => {
+  if (e.target.id === 'import-datei' && e.target.files[0]) {
+    const leser = new FileReader();
+    leser.onload = () => { $('import-feld').value = leser.result; };
+    leser.readAsText(e.target.files[0]);
+    return;
+  }
   if (e.target.dataset.act === 'haken') {
     const id = satz().id, h = stand.haken[id] ||= [];
     h[Number(e.target.dataset.k)] = e.target.checked;
