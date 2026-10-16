@@ -115,7 +115,7 @@ let TEXT = null, SAETZE = [];
 
 // ───────────────────────────── Zustand
 function neuerStand() {
-  return { text: null, pos: {}, satz: 0, tab: 'text', modus: {}, fort: {}, ueb: {}, haken: {}, vok: {}, alle: {} };
+  return { text: null, pos: {}, satz: 0, tab: 'text', modus: {}, fort: {}, ueb: {}, haken: {}, vok: {}, alle: {}, dialog: {} };
 }
 let stand = neuerStand();
 
@@ -181,6 +181,7 @@ const lemmaKey = wd => wd.l.split(/[ ,(]/)[0].toLowerCase();
 
 function wortKlassen(s, i, rollen, imText) {
   const wd = s.w[i], k = ['wort'];
+  if (imText && hinweisWoerter.has(i)) k.push('frage');
   if (rollen.has(wd.rolle)) { k.push('r-' + wd.rolle); if (wd.zusatz) k.push(wd.zusatz); }
   if (rollen.has('K') && wd.einl) k.push('e');
   if (imText && modus() === 'gefuehrt') {
@@ -216,6 +217,7 @@ function woerterHtml(s, von, bis, rollen, imText) {
 // ───────────────────────────── Darstellung: Übersetzen
 function renderText() {
   const s = satz(), f = fort(), n = SAETZE.length, rollen = sichtbareRollen();
+  hinweisWoerter = markierteWoerter(s);
   let h = `<section class="navi">
     <button class="pfeil" data-act="zurueck" ${stand.satz === 0 ? 'disabled' : ''} aria-label="Voriger Satz">‹</button>
     <button class="mitte" data-act="uebersicht"><b>Satz ${stand.satz + 1}</b> von ${n} <small>· § ${esc(s.ref)}${f.fertig ? ' · ✓' : ''}</small></button>
@@ -330,6 +332,7 @@ function punkteHtml() {
 function renderUebersetzung() {
   const s = satz(), f = fort();
   let h = `<textarea id="ueb" placeholder="Deine Übersetzung …" autocomplete="off" autocapitalize="sentences">${esc(stand.ueb[s.id] || '')}</textarea>
+    ${renderSokrates()}
     <details class="kontrolle"><summary>Selbstkontrolle vor dem Vergleich</summary><ul>${KONTROLLE.map(t => `<li>${esc(t)}</li>`).join('')}</ul></details>
     <div class="knoepfe">
       <button class="btn2" data-act="zeige-w">${sitzung.zeigeW ? 'Wörtlich ✓' : 'Wörtliche Fassung'}</button>
@@ -351,6 +354,132 @@ function renderUebersetzung() {
     else h += '<p class="bilanz">Das war der letzte Satz dieses Abschnitts. Deine Gesamtübersetzung findest du in der Übersicht (Mitte oben).</p>';
   }
   return h;
+}
+
+// ───────────────────────────── Übersetzung prüfen lassen (sokratisch)
+// Claude bewertet die eigene Übersetzung gegen die gespeicherte Analyse und nennt je Runde EINEN Fehler:
+// Stufe 1 offene Leitfrage, Stufe 2 gezielte Frage, Stufe 3 Erklärung mit Lösung dieser Stelle.
+let hinweisWoerter = new Set(), sokratesLaeuft = null;
+const STUFE = { 1: 'Leitfrage', 2: 'Gezielter Hinweis', 3: 'Erklärung' };
+
+function markierteWoerter(s) {
+  const runden = stand.dialog[s.id] || [], letzte = runden[runden.length - 1];
+  const set = new Set();
+  if (!letzte || letzte.urteil !== 'fehler') return set;
+  for (const form of letzte.woerter || []) {
+    const i = s.w.findIndex(wd => !wd.p && wd.t.toLowerCase() === String(form).toLowerCase());
+    if (i >= 0) set.add(i);
+  }
+  return set;
+}
+
+function renderSokrates() {
+  const s = satz(), runden = stand.dialog[s.id] || [];
+  if (!sample) return `<p class="leise sok-hinweis">Übersetzung prüfen lassen gibt es in der <a href="${ARTEFAKT}" target="_blank" rel="noopener">Fassung in claude.ai</a>.</p>`;
+  const laeuft = sokratesLaeuft === s.id, letzte = runden[runden.length - 1];
+  let h = '<div class="sokrates" id="sokrates">';
+  for (const r of runden) {
+    h += `<div class="runde">
+      <div class="ich"><span class="wlabel">Deine Fassung</span>${esc(r.ueb)}${r.antwort ? `<div class="antw"><span class="wlabel">Deine Antwort</span>${esc(r.antwort)}</div>` : ''}</div>
+      <div class="rueckfrage ${r.urteil === 'gut' ? 'gut' : ''}">
+        ${r.richtig ? `<div class="richtig">${esc(r.richtig)}</div>` : ''}
+        ${r.urteil === 'gut' ? '<span class="stufe gut">Stimmt</span>' : `<span class="stufe">${STUFE[r.stufe] || 'Hinweis'} · ${r.stufe}/3</span>`}
+        <div>${esc(r.frage)}</div></div></div>`;
+  }
+  if (laeuft) h += '<p class="leise sok-status">Claude liest deine Übersetzung …</p>';
+  else if (sitzung.sokFehler) h += `<p class="sok-fehler">${esc(sitzung.sokFehler)}</p>`;
+  const offen = letzte && letzte.urteil === 'fehler';
+  if (offen && !laeuft) h += `<input type="text" id="sok-antwort" class="sok-antwort" placeholder="Antwort auf die Frage (optional)" autocomplete="off" value="${esc(sitzung.sokAntwort || '')}">`;
+  h += `<div class="knoepfe"><button class="btn2" data-act="sokrates" ${laeuft ? 'disabled' : ''}>${runden.length ? (offen ? 'Antworten / erneut prüfen' : 'Erneut prüfen') : 'Übersetzung prüfen lassen'}</button>
+    ${runden.length && !laeuft ? '<button class="btn2 klein" data-act="sokrates-neu">Gespräch leeren</button>' : ''}</div>`;
+  if (!runden.length) h += '<p class="leise sok-hinweis">Claude sagt dir nicht die Lösung, sondern fragt dich zu deinem wichtigsten Fehler – Schritt für Schritt. Jede Prüfung zählt als eine Nachricht in deinem Claude-Konto.</p>';
+  return h + '</div>';
+}
+
+function promptSokrates(s, runden, ueb, antwort) {
+  const latein = s.w.map(x => (x.p ? x.p : ' ' + x.t)).join('').trim();
+  const woerter = s.w.filter(x => !x.p).map(x => `- ${x.t} | ${x.l} | ${x.b} | ${x.f} | ${x.fn}`).join('\n');
+  const teile = Object.entries(s.teile).map(([id, t]) => `- ${t.name}: ${s.w.filter(x => !x.p && String(x.c) === id).map(x => x.t).join(' ')}${t.info ? ' (' + t.info + ')' : ''}`).join('\n');
+  const vorher = runden[runden.length - 1];
+  const verlauf = runden.length
+    ? runden.map((r, k) => `Runde ${k + 1}: Übersetzung „${r.ueb}“${r.antwort ? `, Antwort „${r.antwort}“` : ''} → deine Rückmeldung [${r.urteil}${r.urteil === 'fehler' ? `, fehler_id ${r.fehler_id}, Stufe ${r.stufe}` : ''}]: „${r.frage}“`).join('\n')
+    : '(noch keins)';
+  const naechste = vorher && vorher.urteil === 'fehler' ? Math.min(3, (vorher.stufe || 1) + 1) : 1;
+  return `Du bist ein geduldiger Lateinlehrer und arbeitest nach der sokratischen Methode: Du verrätst keine Lösung, sondern führst den Lernenden mit Fragen selbst zur Einsicht. Die App, in der du antwortest, übt eine feste Methode: Teilsätze → Prädikate → Subjekte → Objekte → Bezüge (KNG) → Konstruktionen → Übersetzen.
+
+Lateinischer Satz [${s.ref}]: ${latein}
+
+Verbindliche Analyse (Grundlage deiner Bewertung – erfinde keine Formen oder Bedeutungen darüber hinaus):
+Wörter (Form | Wörterbuch | Bedeutung | Bestimmung | Funktion):
+${woerter}
+Teilsätze:
+${teile}
+Musterübersetzung wörtlich: ${s.woertlich}
+Musterübersetzung gutes Deutsch: ${s.gut}
+
+Bisheriges Gespräch:
+${verlauf}
+
+Aktuelle Übersetzung des Lernenden: „${ueb}“
+Antwort auf deine letzte Frage: ${antwort ? '„' + antwort + '“' : '(keine)'}
+
+So gehst du vor:
+1. Vergleiche die Übersetzung mit der Analyse. Bewerte Sinn und Grammatik, nicht den Stil: Eine freie, aber sachlich richtige Wiedergabe ist richtig. Abweichungen von der Musterübersetzung sind kein Fehler, solange Kasus, Numerus, Person, Tempus, Modus, Bezüge und Konstruktionen stimmen. Fehlt ein Wort oder Satzteil ganz, ist das ein Fehler.
+2. Gibt es Fehler, wähle den wichtigsten (Satzbau und Bezüge vor Formen vor Wortwahl) und gib genau EINE Rückmeldung dazu:
+   Stufe 1: eine offene Frage, die auf die Stelle und den passenden Methodenschritt lenkt, z. B. „Schau dir das Prädikat des Hauptsatzes noch einmal an – welche Person hat es?“
+   Stufe 2: eine gezielte Frage mit Hinweis auf Form oder Regel, ohne die Lösung zu nennen.
+   Stufe 3: erkläre den Fehler und nenne die richtige Wiedergabe dieser Stelle.
+${vorher && vorher.urteil === 'fehler'
+    ? `   Besteht der Fehler aus der letzten Runde (fehler_id „${vorher.fehler_id}“) noch, nimm denselben fehler_id und Stufe ${naechste}. Ist er behoben, sag das kurz in "richtig" und nimm den nächsten Fehler auf Stufe 1.
+   Hat der Lernende deine Frage richtig beantwortet, die Übersetzung aber noch nicht angepasst, bestätige die Antwort in "richtig" und frage (gleicher fehler_id, gleiche Stufe ${vorher.stufe}), was das für seine Übersetzung bedeutet.`
+    : '   Beginne mit Stufe 1.'}
+3. Ist die Übersetzung richtig: urteil "gut", nenne in "richtig" konkret, was gelungen ist, und gib in "frage" höchstens einen kurzen Stilvorschlag oder eine Frage zum Inhalt des Satzes.
+Schreib Deutsch, per du, knapp: "frage" höchstens zwei Sätze, "richtig" höchstens ein Satz. Kein Lob ohne Inhalt.
+
+Antworte nur mit JSON:
+{"urteil": "fehler", "fehler_id": "kurzer-schluessel", "stufe": 1, "frage": "…", "woerter": ["lateinische Wörter genau wie im Satz, auf die sich die Frage bezieht"], "richtig": "…"}`;
+}
+
+async function sokratesPruefen() {
+  const s = satz(), ueb = (stand.ueb[s.id] || '').trim();
+  if (sokratesLaeuft) return;
+  if (!ueb) { sitzung.sokFehler = 'Schreib zuerst deine Übersetzung ins Feld.'; return render(); }
+  const antwort = ($('sok-antwort')?.value || '').trim();
+  const runden = stand.dialog[s.id] || [];
+  sokratesLaeuft = s.id; sitzung.sokFehler = ''; sitzung.sokAntwort = antwort;
+  aktualisiereSokrates();
+  try {
+    const a = await sample.json(promptSokrates(s, runden, ueb, antwort), { modelTier: 'complex' });
+    const vorher = runden[runden.length - 1];
+    const urteil = a?.urteil === 'gut' ? 'gut' : 'fehler';
+    const frage = typeof a?.frage === 'string' ? a.frage.trim() : '';
+    if (!frage && urteil === 'fehler') throw { code: 'leer' };
+    let stufe = Math.max(1, Math.min(3, Number(a?.stufe) || 1));
+    // Gleicher Fehler wie zuvor: Stufe steigt mindestens um eins (höchstens 3), egal was Claude angibt
+    if (urteil === 'fehler' && vorher?.urteil === 'fehler' && a?.fehler_id === vorher.fehler_id && !(antwort && stufe === vorher.stufe)) stufe = Math.max(stufe, Math.min(3, vorher.stufe + 1));
+    (stand.dialog[s.id] ||= []).push({
+      ueb, antwort, urteil, stufe, frage,
+      fehler_id: String(a?.fehler_id || ''),
+      woerter: Array.isArray(a?.woerter) ? a.woerter.map(String).slice(0, 6) : [],
+      richtig: typeof a?.richtig === 'string' ? a.richtig.trim() : '',
+    });
+    sitzung.sokAntwort = '';
+    speichere();
+  } catch (e) {
+    sitzung.sokFehler = { not_granted: 'Claude ist für diese Seite nicht freigegeben. Lade die Seite neu, um wieder gefragt zu werden.',
+      rate_limited: 'Nutzungslimit erreicht – später noch einmal versuchen.', session_expired: 'Bitte in claude.ai neu anmelden.',
+      refused: 'Claude hat diese Anfrage abgelehnt.' }[e?.code] || 'Die Prüfung hat nicht geklappt. Bitte noch einmal tippen.';
+  } finally {
+    sokratesLaeuft = null;
+    aktualisiereSokrates();
+  }
+}
+
+// Während jemand tippt, nur den Gesprächsblock erneuern – sonst alles (für die Markierung im Text)
+function aktualisiereSokrates() {
+  const tippt = document.activeElement && ['ueb', 'sok-antwort'].includes(document.activeElement.id);
+  if (stand.tab === 'text' && tippt && $('sokrates')) $('sokrates').outerHTML = renderSokrates();
+  else render();
 }
 
 function renderCheckliste() {
@@ -586,7 +715,7 @@ function entferneText(id) {
   importRoh = importRoh.filter(roh => { try { return JSON.parse(roh).id !== id; } catch (_) { return false; } });
   Lager.loescheText(id, importRoh);
   ALLE.splice(ALLE.indexOf(t), 1);
-  for (const s of t.saetze) for (const feld of ['fort', 'ueb', 'haken', 'alle', 'modus']) delete stand[feld][s.id];
+  for (const s of t.saetze) for (const feld of ['fort', 'ueb', 'haken', 'alle', 'modus', 'dialog']) delete stand[feld][s.id];
   delete stand.pos[id];
   if (TEXT === t) { TEXT = null; waehleText(TEXTE[0].id); }
   neueSitzung(); speichereAlles();
@@ -687,6 +816,8 @@ document.addEventListener('click', e => {
     case 'schliessen': return schliesseBlatt();
     case 'modus': stand.modus[s.id] = el.dataset.m; neueSitzung(); speichere(); return render();
     case 'intro-weg': stand.intro = true; speichere(); return render();
+    case 'sokrates': return sokratesPruefen();
+    case 'sokrates-neu': delete stand.dialog[s.id]; sitzung.sokFehler = ''; speichere(); return render();
     case 'tipp': sitzung.tipp = true; return render();
     case 'pruefen': return pruefe();
     case 'loesung':
@@ -721,7 +852,7 @@ document.addEventListener('click', e => {
       return;
     }
     case 'reset-satz':
-      delete stand.fort[s.id]; delete stand.haken[s.id]; delete stand.alle[s.id];
+      delete stand.fort[s.id]; delete stand.haken[s.id]; delete stand.alle[s.id]; delete stand.dialog[s.id];
       neueSitzung(); speichereAlles(); schliesseBlatt(); return render();
     case 'vok-weg': delete stand.vok[el.dataset.key]; speichere(); return render();
     case 'abfrage': {
@@ -776,6 +907,7 @@ document.addEventListener('change', e => {
 });
 document.addEventListener('input', e => {
   if (e.target.id === 'ueb') { stand.ueb[satz().id] = e.target.value; speichere(); }
+  if (e.target.id === 'sok-antwort') sitzung.sokAntwort = e.target.value;
 });
 document.addEventListener('toggle', e => {
   if (e.target.matches?.('details.satzbild') && gegliedert()) sitzung.satzbildOffen = e.target.open;

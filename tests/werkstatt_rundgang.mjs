@@ -43,8 +43,16 @@ await seite.addInitScript(({ SAETZE, einheiten }) => {
   const aufrufe = window.__aufrufe = [];
   const fake = async () => ({ text: '', truncated: false });
   fake.limits = async () => ({ maxPromptBytes: 262144, images: { maxCount: 5, maxInputBytes: 2e7, mediaTypes: ['image/jpeg', 'image/png'] } });
+  const sok = window.__sok = [];
+  const SOK_ANTWORTEN = [
+    { urteil: 'fehler', fehler_id: 'volunt-person', stufe: 1, frage: 'Schau dir das Prädikat des Hauptsatzes an – welche Person hat volunt?', woerter: ['volunt'], richtig: 'Das Subjekt omnes hast du richtig erkannt.' },
+    { urteil: 'fehler', fehler_id: 'volunt-person', stufe: 1, frage: 'Stimmt. Was heißt das für deine Übersetzung?', woerter: ['volunt'], richtig: 'Deine Antwort ist richtig.' },
+    { urteil: 'fehler', fehler_id: 'volunt-person', stufe: 1, frage: 'Noch einmal: Wer will?', woerter: ['volunt'], richtig: '' },
+    { urteil: 'gut', fehler_id: '', stufe: 1, frage: 'Wie könntest du die Betonung von Vivere im Deutschen nachbilden?', woerter: [], richtig: 'Satzbau, Bezüge und Formen stimmen.' },
+  ];
   fake.json = async (input, opts = {}) => {
     await new Promise(r => setTimeout(r, 30));
+    if (input.includes('sokratischen Methode')) { sok.push(input); return SOK_ANTWORTEN[Math.min(sok.length - 1, 3)]; }
     if (opts.images) {
       aufrufe.push({ art: 'erkennen', bilder: opts.images.length });
       // Einheit 1 ohne Stellenangabe – so liefert Claude Lehrbuchtexte ohne Abschnittszahlen
@@ -90,6 +98,42 @@ await seite.goto(url);
 await geladen();
 pruefe((await seite.locator('.mitte').innerText()).includes('von 8'), 'Eingebauter Text nicht aktiv');
 await seite.click('[data-act=intro-weg]');
+
+// ───────── Übersetzung prüfen lassen (sokratisch), Satz 1 im Modus „Selbstständig“
+await seite.click('[data-act=modus][data-m=selbst]');
+await seite.click('[data-act=sokrates]');
+pruefe((await seite.locator('.sok-fehler').innerText()).includes('Schreib zuerst'), 'Sokrates: Hinweis bei leerem Feld fehlt');
+await seite.fill('#ueb', 'Leben will jeder glücklich, Bruder Gallio, aber sie sehen nicht, was das Leben glücklich macht.');
+await seite.click('[data-act=sokrates]');
+await seite.waitForFunction(() => document.querySelectorAll('.runde').length === 1);
+pruefe((await seite.locator('.runde .stufe').innerText()).includes('1/3'), 'Sokrates: Stufe 1 fehlt');
+pruefe(await seite.locator('#latein .wort.frage').count() === 1, 'Sokrates: volunt sollte im Text markiert sein');
+const p1 = await seite.evaluate(() => window.__sok[0]);
+pruefe(p1.includes('Leben will jeder glücklich') && p1.includes('volunt | velle'), 'Sokrates: Prompt ohne Übersetzung oder Analyse');
+await seite.fill('#sok-antwort', '3. Person Plural');
+await seite.click('[data-act=sokrates]');
+await seite.waitForFunction(() => document.querySelectorAll('.runde').length === 2);
+const p2 = await seite.evaluate(() => window.__sok[1]);
+pruefe(p2.includes('Antwort auf deine letzte Frage: „3. Person Plural“'), 'Sokrates: Antwort fehlt im Prompt');
+pruefe((await seite.locator('.runde').nth(1).locator('.stufe').innerText()).includes('1/3'), 'Sokrates: nach richtiger Antwort sollte die Stufe bleiben');
+await seite.click('[data-act=sokrates]');
+await seite.waitForFunction(() => document.querySelectorAll('.runde').length === 3);
+pruefe(await seite.evaluate(() => window.__sok[2].includes('Stufe 2')), 'Sokrates: Prompt fordert nicht Stufe 2');
+pruefe((await seite.locator('.runde').nth(2).locator('.stufe').innerText()).includes('2/3'), 'Sokrates: gleicher Fehler ohne Antwort muss Stufe 2 werden');
+await seite.fill('#ueb', 'Glücklich leben wollen alle, Bruder Gallio; doch beim Durchschauen, was ein Leben glücklich macht, tappen sie im Dunkeln.');
+await seite.click('[data-act=sokrates]');
+await seite.waitForFunction(() => document.querySelectorAll('.runde').length === 4);
+pruefe(await seite.locator('.runde .stufe.gut').count() === 1, 'Sokrates: Urteil „stimmt“ fehlt');
+pruefe(await seite.locator('#latein .wort.frage').count() === 0, 'Sokrates: Markierung sollte nach „gut“ verschwinden');
+if (bilder) await seite.screenshot({ path: `${bilder}/s1-sokrates.png`, fullPage: true });
+await seite.waitForFunction(() => { const d = JSON.parse(sessionStorage.getItem('fakedb') || '{}'); const st = Object.entries(d).find(([k]) => k.endsWith('/stand')); return st && st[1].dialog?.s1?.length === 4; }, null, { timeout: 5000 })
+  .catch(() => fehler.push('Sokrates: Gespräch nicht ins Konto geschrieben'));
+await seite.reload();
+await seite.waitForFunction(() => !document.querySelector('.lade') && document.getElementById('haupt').children.length > 0);
+pruefe(await seite.locator('.runde').count() === 4, 'Sokrates: Gespräch nach Neuladen verloren');
+await seite.click('[data-act=sokrates-neu]');
+pruefe(await seite.locator('.runde').count() === 0, 'Sokrates: Gespräch leeren geht nicht');
+await seite.click('[data-act=modus][data-m=gefuehrt]');
 await seite.click('[data-act=vor]');                          // Fortschritt im eingebauten Text: Satz 2
 await seite.waitForFunction(() => window.__schreibe.some(p => p.endsWith('/stand')), null, { timeout: 5000 }).catch(() => fehler.push('Stand wurde nicht ins Konto geschrieben'));
 

@@ -85,6 +85,7 @@ while (await seite.locator('[data-act=loesung]').count()) {
   await seite.click('[data-act=weiter]');
 }
 await seite.fill('#ueb', 'Glücklich leben wollen alle, Bruder Gallio …');
+pruefe((await seite.locator('.sok-hinweis').innerText()).includes('claude.ai'), 'Pages: Hinweis auf Prüfen in claude.ai fehlt');
 await seite.click('[data-act=zeige-g]');
 await seite.click('[data-act=fertig]');
 pruefe(await seite.locator('.merke').count() === 1, 'Merke-Kasten nach Abschluss fehlt');

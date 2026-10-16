@@ -212,6 +212,26 @@ textarea:focus { outline: none; border-color: var(--akzent); }
 .kontrolle { margin: 10px 0; font-size: 15px; }
 .kontrolle summary { cursor: pointer; font-weight: 600; }
 .kontrolle ul { margin: 6px 0 0; padding-left: 20px; }
+/* Übersetzung prüfen lassen */
+.sokrates { display: flex; flex-direction: column; gap: 10px; margin: 0 0 12px; }
+.runde { display: flex; flex-direction: column; gap: 6px; }
+.runde .ich { align-self: flex-end; max-width: 92%; background: var(--bg); border: 1px solid var(--linie); border-radius: 14px 14px 4px 14px; padding: 8px 12px; font-size: 15px; }
+.runde .antw { margin-top: 6px; }
+.runde .wlabel { display: block; margin-bottom: 2px; }
+.rueckfrage { align-self: flex-start; max-width: 92%; background: var(--lehrer); border-left: 4px solid var(--od); border-radius: 4px 14px 14px 14px; padding: 8px 12px; font-size: 15px; }
+.rueckfrage.gut { border-left-color: var(--o); }
+.rueckfrage .richtig { color: var(--o); font-weight: 600; margin-bottom: 4px; }
+.stufe { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--od); margin-bottom: 2px; }
+.stufe.gut { color: var(--o); }
+.sok-antwort { width: 100%; border: 1.5px solid var(--linie); border-radius: 12px; padding: 9px 12px; font: 16px var(--sans); background: var(--bg); color: var(--text); }
+.sok-antwort:focus { outline: none; border-color: var(--akzent); }
+.sok-status { font-style: italic; }
+.sok-fehler { color: var(--p); font-size: 14px; }
+.sok-hinweis { font-size: 13px; }
+.sok-hinweis a { color: var(--akzent); }
+.btn2.klein { font-size: 13px; padding: 6px 10px; }
+.wort.frage { background: color-mix(in srgb, var(--od) 22%, transparent); box-shadow: inset 0 -2px 0 var(--od); }
+
 .merke { background: var(--lehrer); border-radius: 12px; padding: 10px 12px; margin: 10px 0; }
 .merke ul { margin: 4px 0 0; padding-left: 20px; }
 .bilanz { font-size: 14px; color: var(--leise); margin: 8px 0; }
